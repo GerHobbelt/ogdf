@@ -68,13 +68,13 @@
 # include <sys/time.h>
 #endif
 #ifdef __GNUC__
-# include <cpuid.h>
+//# include <cpuid.h>
 #endif
 
 static inline void cpuid(int CPUInfo[4], int infoType)
 {
 #if defined(OGDF_SYSTEM_WINDOWS) && !defined(__GNUC__)
-	__cpuid(CPUInfo, infoType);
+//	__cpuid(CPUInfo, infoType);
 #else
 	uint32_t a = 0;
 	uint32_t b = 0;
@@ -82,7 +82,7 @@ static inline void cpuid(int CPUInfo[4], int infoType)
 	uint32_t d = 0;
 
 # ifdef __GNUC__
-	__get_cpuid(infoType, &a, &b, &c, &d);
+//	__get_cpuid(infoType, &a, &b, &c, &d);
 # endif
 
 	CPUInfo[0] = a;
