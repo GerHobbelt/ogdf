@@ -10,7 +10,10 @@
 
 #if defined(_MSC_VER)
 #  include <direct.h>
+#  include <crtdbg.h>
+#  ifndef getcwd 
 #  define getcwd _getcwd
+#  endif
 #else
 #  include <unistd.h>
 #endif
