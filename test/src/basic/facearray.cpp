@@ -1,7 +1,7 @@
 /** \file
- * \brief Tests for ogdf::EdgeArray
+ * \brief Tests for ogdf::FaceArray
  *
- * \author Mirko Wagner, Tilo Wiedera
+ * \author Matthias Pfretzschner
  *
  * \par License:
  * This file is part of the Open Graph Drawing Framework (OGDF).
@@ -28,21 +28,34 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/CombinatorialEmbedding.h>
+
 #include "array_helper.h"
 
-using namespace ogdf;
-using namespace bandit;
-
 go_bandit([]() {
-	auto chooseEdge = [](const Graph& graph) { return graph.chooseEdge(); };
+	auto chooseFace = [](const CombinatorialEmbedding& C) { return C.chooseFace(); };
 
-	auto allEdges = [](const Graph& graph, List<edge>& list) { graph.allEdges(list); };
-
-	auto createEdge = [](Graph& graph) {
-		return graph.newEdge(graph.chooseNode(), graph.chooseNode());
+	auto allFaces = [](const CombinatorialEmbedding& C, List<face>& list) {
+		list.clear();
+		for (face f : C.faces) {
+			list.pushBack(f);
+		}
 	};
 
-	auto init = [](Graph& graph) { randomGraph(graph, 42, 168); };
+	auto createFace = [](CombinatorialEmbedding& C) {
+		adjEntry a1 = C.lastFace()->firstAdj();
+		adjEntry a2 = C.lastFace()->nextFaceEdge(a1);
+		C.splitFace(a1, a2);
+		return C.lastFace();
+	};
 
-	runBasicArrayTests<Graph, EdgeArray, edge>("EdgeArray", init, chooseEdge, allEdges, createEdge);
+	Graph G;
+
+	auto init = [&](CombinatorialEmbedding& C) {
+		randomPlanarConnectedGraph(G, 42, 168);
+		C.init(G);
+	};
+
+	runBasicArrayTests<CombinatorialEmbedding, FaceArray, face>( //
+			"FaceArray", init, chooseFace, allFaces, createFace);
 });

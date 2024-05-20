@@ -521,7 +521,6 @@ class OGDF_EXPORT GraphAdjIterator {
 
 public:
 	using iterator = GraphAdjIterator;
-	using const_iterator = GraphAdjIterator;
 	using value_type = adjEntry;
 
 	//! Constructor.
@@ -596,7 +595,6 @@ class GraphRegistry
 
 public:
 	using iterator = typename Iterable::iterator;
-	using const_iterator = typename Iterable::const_iterator;
 
 	//! Constructor.
 	GraphRegistry(Graph* graph, int* nextKeyIndex)
@@ -741,7 +739,7 @@ class EdgeSet;
 class OGDF_EXPORT GraphObserver : public Observer<Graph, GraphObserver> {
 public:
 	//! Constructs instance of GraphObserver class
-	GraphObserver() { }
+	GraphObserver() = default;
 
 	/**
 	 *\brief Constructs instance of GraphObserver class
@@ -1760,6 +1758,8 @@ public:
 	 */
 	std::pair<int, int> insert(const CCsInfo& info, int cc, NodeArray<node>& nodeMap,
 			EdgeArray<edge>& edgeMap) {
+		OGDF_ASSERT(&(info.constGraph()) == nodeMap.registeredAt()->graphOf());
+		OGDF_ASSERT(&(info.constGraph()) == edgeMap.registeredAt()->graphOf());
 		m_regNodeArrays.reserveSpace(info.numberOfNodes(cc));
 		m_regEdgeArrays.reserveSpace(info.numberOfEdges(cc));
 		m_regAdjArrays.reserveSpace(info.numberOfEdges(cc));
@@ -1805,6 +1805,11 @@ public:
 		EdgeArray<edge> edgeMap(G, nullptr);
 		return insert(G, nodeMap, edgeMap);
 	}
+
+private:
+	template<OGDF_NODE_ITER NI, bool notifyObservers, bool copyIDs>
+	void insertNodes(const NI& nodesBegin, const NI& nodesEnd, NodeArray<node, true>& nodeMap,
+			int& newNodes, void* cbData);
 
 protected:
 	/**
