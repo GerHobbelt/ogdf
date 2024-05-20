@@ -144,7 +144,7 @@ void describeGraphCopySimple(int numberOfNodes) {
 			it("works with an empty graph", [&]() {
 				graphCopy.reset(new GCType());
 				graph.clear();
-				graphCopy->createEmpty(graph);
+				graphCopy->setOriginalGraph(graph);
 				AssertThat(&(graphCopy->original()), Equals(&graph));
 				AssertThat(graphCopy->numberOfNodes(), Equals(0));
 				AssertThat(graphCopy->numberOfEdges(), Equals(0));
@@ -152,7 +152,7 @@ void describeGraphCopySimple(int numberOfNodes) {
 
 			it("works with a non-empty graph", [&]() {
 				graphCopy.reset(new GCType(graph));
-				graphCopy->createEmpty(graph);
+				graphCopy->setOriginalGraph(graph);
 				AssertThat(&(graphCopy->original()), Equals(&graph));
 				AssertThat(graphCopy->numberOfNodes(), Equals(numberOfNodes));
 				AssertThat(graphCopy->numberOfEdges(), Equals(numberOfNodes * 4));
@@ -231,6 +231,7 @@ void describeGraphCopySimple(int numberOfNodes) {
 	});
 
 	describe("advanced initialization", [&]() {
+		NodeArray<node> nCopy;
 		EdgeArray<edge> eCopy;
 		List<node> origNodes;
 
@@ -245,8 +246,17 @@ void describeGraphCopySimple(int numberOfNodes) {
 			Graph::CCsInfo ccs = Graph::CCsInfo(graph);
 			graphCopy.reset(new GCType());
 			int numberOfCC = ccs.numberOfCCs() - 1;
-			graphCopy->createEmpty(graph);
-			graphCopy->initByCC(ccs, numberOfCC, eCopy);
+			graphCopy->setOriginalGraph(graph);
+			// inlined GraphCopy::initByCC(m_ccInfo, cc, m_eAuxCopy):
+			nCopy.init(graph);
+			eCopy.init(graph);
+#ifdef OGDF_DEBUG
+			auto count =
+#endif
+					graphCopy->insert(ccs, numberOfCC, nCopy, eCopy);
+			OGDF_ASSERT(count.first == ccs.numberOfNodes(numberOfCC));
+			OGDF_ASSERT(count.second == ccs.numberOfEdges(numberOfCC));
+
 			origNodes.clear();
 			for (int i = ccs.startNode(numberOfCC); i < ccs.stopNode(numberOfCC); i++) {
 				origNodes.pushBack(ccs.v(i));
@@ -255,47 +265,58 @@ void describeGraphCopySimple(int numberOfNodes) {
 		});
 
 		it("is initialized by either all or none of the nodes of a component", [&]() {
-			origNodes.clear();
-			graphCopy.reset(new GCType());
-			graphCopy->createEmpty(graph);
-			graphCopy->initByNodes(origNodes, eCopy);
-			testInitGraph(graph, *graphCopy, true, origNodes, eCopy);
+			auto test = [&](bool all) {
+				graphCopy.reset(new GCType());
+				graphCopy->setOriginalGraph(graph);
+				nCopy.init(graph);
+				eCopy.init(graph);
+#ifdef OGDF_DEBUG
+				auto count =
+#endif
+						graphCopy->insert(origNodes.begin(), origNodes.end(), filter_any_edge,
+								nCopy, eCopy);
+				OGDF_ASSERT(count.first == origNodes.size());
+				testInitGraph(graph, *graphCopy, all, origNodes, eCopy);
+			};
 
-			graphCopy.reset(new GCType());
+			origNodes.clear();
+			test(true);
+
 			origNodes.clear();
 			graph.allNodes<List<node>>(origNodes);
-			eCopy = EdgeArray<edge>(graph);
-			graphCopy->createEmpty(graph);
-			graphCopy->initByNodes(origNodes, eCopy);
-			testInitGraph(graph, *graphCopy, true, origNodes, eCopy);
+			test(true);
 
-			graphCopy.reset(new GCType());
 			origNodes = List<node>();
 			origNodes.pushBack(graph.firstNode());
 			origNodes.pushBack(graph.lastNode());
-			eCopy = EdgeArray<edge>(graph);
-			graphCopy.reset(new GCType(graph));
-			graphCopy->initByNodes(origNodes, eCopy);
-			testInitGraph(graph, *graphCopy, false, origNodes, eCopy);
+			test(false);
 		});
 
 		it("is initialized by arbitrary nodes", [&]() {
-			eCopy = EdgeArray<edge>(graph);
-			NodeArray<bool> activeNodes(graph, false);
 			node actNode1 = graph.chooseNode();
 			node actNode2 = actNode1->lastAdj()->twin()->theNode();
-			activeNodes[actNode1] = true;
-			activeNodes[actNode2] = true;
-			origNodes.clear();
-			origNodes.pushBack(actNode1);
-			origNodes.pushBack(actNode2);
-			graphCopy->createEmpty(graph);
-			graphCopy->initByActiveNodes(origNodes, activeNodes, eCopy);
-			List<node> asdf;
-			graphCopy->allNodes(asdf);
-			List<edge> asdfgh;
-			graphCopy->allEdges(asdfgh);
-			testInitGraph(graph, *graphCopy, false, origNodes, eCopy);
+
+			{
+				origNodes.clear();
+				origNodes.pushBack(actNode1);
+				origNodes.pushBack(actNode2);
+
+				graphCopy->clear();
+				graphCopy->setOriginalGraph(graph);
+				eCopy.init(graph);
+				nCopy.init(graph);
+				graphCopy->insert(origNodes.begin(), origNodes.end(), filter_any_edge, nCopy, eCopy);
+				testInitGraph(graph, *graphCopy, false, origNodes, eCopy);
+			}
+
+			{
+				graphCopy->clear();
+				graphCopy->setOriginalGraph(graph);
+				eCopy.init(graph);
+				nCopy.init(graph);
+				graphCopy->insert(origNodes, std::array<edge, 0> {}, nCopy, eCopy);
+				testInitGraph(graph, *graphCopy, false, origNodes, eCopy);
+			}
 		});
 	});
 
