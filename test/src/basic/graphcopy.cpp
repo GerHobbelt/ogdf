@@ -35,6 +35,7 @@
 #include <ogdf/basic/graph_generators.h>
 
 #include <graphs.h>
+
 #include <testing.h>
 
 //! Tests if a GraphCopy is initialized correctly
@@ -424,14 +425,20 @@ void describeGraphCopySimple(int numberOfNodes) {
 
 	describe("original embedding", [&]() {
 		before_each([&]() {
-			randomPlanarCNBGraph(graph, numberOfNodes,
-					static_cast<int>(min(numberOfNodes * 2.5, numberOfNodes * 3.0 - 6)), 3);
-			randomPlanarBiconnectedGraph(graph, numberOfNodes,
-					static_cast<int>(min(numberOfNodes * 2.5, numberOfNodes * 3.0 - 6)), true);
-			node n = graph.chooseNode();
-			graph.newEdge(n, n);
+			{
+				graph.clear();
+				Graph G;
+				randomPlanarCNBGraph(G, numberOfNodes,
+						static_cast<int>(min(numberOfNodes * 2.5, numberOfNodes * 3.0 - 6)), 3);
+				graph.insert(G);
+				randomPlanarBiconnectedGraph(G, numberOfNodes,
+						static_cast<int>(min(numberOfNodes * 2.5, numberOfNodes * 3.0 - 6)), true);
+				graph.insert(G);
+				node n = graph.chooseNode();
+				graph.newEdge(n, n);
+			}
 			graphCopy.reset(new GCType(graph));
-			planarEmbed(graph);
+			AssertThat(planarEmbed(graph), IsTrue());
 			do {
 				shuffleEmbedding(*graphCopy);
 			} while (graphCopy->representsCombEmbedding());
