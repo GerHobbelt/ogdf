@@ -94,8 +94,8 @@ bool SyncPlan::makeReduced(int check_planarity_every) {
 		undo_stack.pushBack(new ResetIndices(*this));
 	}
 	if (!matchings.getPipeQueue()) {
-		log.lout(Logger::Level::Minor) << "Using default PipeQueueByDegree" << std::endl;
-		matchings.setPipeQueue(std::make_unique<PipeQueueByDegree>());
+		log.lout(Logger::Level::Minor) << "Using default PipeQueueByDegreePreferContract" << std::endl;
+		matchings.setPipeQueue(std::make_unique<PipeQueueByDegreePreferContract>(this));
 	}
 	pushUndoOperationAndCheck(new VerifyPipeBijections(*this));
 	int steps = 0;
@@ -184,7 +184,7 @@ bool SyncPlan::makeReduced(int check_planarity_every) {
 			return false;
 		}
 	}
-	OGDF_ASSERT(consistency.consistencyCheck());
+	OGDF_ASSERT(consistency.consistencyCheck(true));
 	// SYNCPLAN_PROFILE_STOP("makeReduced")
 	return true;
 }

@@ -39,12 +39,12 @@
 #include <ogdf/basic/pctree/PCNode.h>
 #include <ogdf/basic/pctree/PCRegistry.h>
 #include <ogdf/basic/pctree/PCTreeIterators.h>
+#include <ogdf/basic/pctree/util/FilteringBFS.h>
 #include <ogdf/basic/pctree/util/IntrusiveList.h>
 #include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/QPartitioning.h>
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
-#include <ogdf/cluster/sync_plan/basic/GraphIterators.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
@@ -117,7 +117,8 @@ public:
 		}
 #pragma GCC diagnostic pop
 
-		node u = pq.G->newNode(u_idx);
+		node u = pq.nodeFromIndex(u_idx);
+		OGDF_ASSERT(pq.deletedNodes.remove(u));
 		edge ue = pq.G->newEdge(u, pq.nodeFromIndex(pct_u.front()));
 		pq.log.lout() << "Collapsing tree at u into " << pq.fmtPQNode(u, false) << " via edge #"
 					  << ue->index() << " " << ue << "." << std::endl;
@@ -127,7 +128,8 @@ public:
 		OGDF_ASSERT(un == pct_u.size());
 		OGDF_ASSERT(u->degree() == degree);
 
-		node v = pq.G->newNode(v_idx);
+		node v = pq.nodeFromIndex(v_idx);
+		OGDF_ASSERT(pq.deletedNodes.remove(v));
 		edge ve = pq.G->newEdge(v, pq.nodeFromIndex(pct_v.front()));
 		pq.log.lout() << "Collapsing tree at v into " << pq.fmtPQNode(v, false) << " via edge #"
 					  << ve->index() << " " << ve << "." << std::endl;
@@ -188,8 +190,8 @@ public:
 			count++;
 		}
 #ifdef OGDF_HEAVY_DEBUG
-		for (adjEntry adj : root->adjEntries) {
-			OGDF_ASSERT(markers[adj->twinNode()] != mark);
+		for (adjEntry a : root->adjEntries) {
+			OGDF_ASSERT(markers[a->twinNode()] != mark);
 		}
 #endif
 		if (pq.matchings.isMatchedPVertex(root)) {
@@ -309,6 +311,7 @@ SyncPlan::Result SyncPlan::propagatePQ(node u, NodePCRotation* pct, NodePCRotati
 	NodeArray<PCNode*> pcg_to_pct(pcg, nullptr);
 	PCTreeNodeArray<ogdf::node> pct_to_pcg(*pct, nullptr);
 	pct->getTree(pcg, nullptr, pct_to_pcg);
+	pcg.reverseAllEdges();
 	for (PCNode* pctn : pct->allNodes()) {
 		pcg_to_pct[pct_to_pcg[pctn]] = pctn;
 	}
@@ -418,8 +421,10 @@ SyncPlan::Result SyncPlan::propagatePQ(node u, NodePCRotation* pct, NodePCRotati
 
 	OGDF_ASSERT(u->degree() == 0);
 	OGDF_ASSERT(v->degree() == 0);
-	G->delNode(u);
-	G->delNode(v);
+#ifdef OGDF_DEBUG
+	deletedNodes.insert(u);
+	deletedNodes.insert(v);
+#endif
 	pushUndoOperationAndCheck(undo_op);
 
 	for (node w : make_wheels) {

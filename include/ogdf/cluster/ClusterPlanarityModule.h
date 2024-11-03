@@ -59,27 +59,22 @@ public:
 
 	//! Returns true, if \p CG is cluster-planar, false otherwise. If true, \p CG contains a cluster-planar embedding.
 	virtual bool clusterPlanarEmbed(ClusterGraph& CG, Graph& G) {
-		GraphCopy Gcopy;
-		Gcopy.setOriginalGraph(G);
-
-		ClusterArray<cluster> origC;
-		NodeArray<node> origN;
-		EdgeArray<edge> origE;
-		ClusterGraph CGcopy(CG, Gcopy, origC, origN, origE);
+		OGDF_ASSERT(&CG.constGraph() == &G);
+		Graph Gcopy;
+		ClusterArray<cluster> copyC(CG, nullptr);
+		NodeArray<node> copyN(G, nullptr);
+		EdgeArray<edge> copyE(G, nullptr);
+		ClusterGraph CGcopy(CG, Gcopy, copyC, copyN, copyE);
 
 		if (!clusterPlanarEmbedClusterPlanarGraph(CGcopy, Gcopy)) {
 			return false;
+		} else {
+			EdgeArray<edge> origE(Gcopy, nullptr);
+			invertRegisteredArray(copyE, origE);
+			copyBackEmbedding(CG, G, CGcopy, Gcopy, copyC, copyN, copyE, origE);
+			return true;
 		}
-		CG.adjAvailable(true);
-		Gcopy.setOriginalEmbedding();
-		for (cluster c : CGcopy.clusters) {
-			origC[c]->adjEntries.clear();
-			for (adjEntry adj : c->adjEntries) {
-				origC[c]->adjEntries.pushBack(Gcopy.original(adj));
-			}
-		}
-		return true;
-	};
+	}
 
 	//! Constructs a cluster-planar embedding of \p CG. \p CG \b has to be cluster-planar!
 	/**
@@ -94,6 +89,20 @@ public:
 		throw std::runtime_error(
 				"Embedding is (currently) not implemented by this ClusterPlanarityModule!");
 	}
+
+protected:
+	virtual void copyBackEmbedding(ClusterGraph& CG, Graph& G, const ClusterGraph& CGcopy,
+			const Graph& Gcopy, const ClusterArray<cluster>& copyC, const NodeArray<node>& copyN,
+			const EdgeArray<edge>& copyE, const EdgeArray<edge>& origE) const {
+		CG.adjAvailable(true);
+		copyEmbedding(Gcopy, G, [&origE](adjEntry adj) { return origE.mapEndpoint(adj); });
+		for (cluster c : CG.clusters) {
+			c->adjEntries.clear();
+			for (adjEntry adj : copyC[c]->adjEntries) {
+				c->adjEntries.pushBack(origE.mapEndpoint(adj));
+			}
+		}
+	};
 };
 
 }

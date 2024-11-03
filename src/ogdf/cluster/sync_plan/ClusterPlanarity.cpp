@@ -34,6 +34,8 @@
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/Logger.h>
 #include <ogdf/basic/basic.h>
+#include <ogdf/basic/extended_graph_alg.h>
+#include <ogdf/basic/simple_graph_alg.h>
 #include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/cluster/ClusterGraphAttributes.h>
 #include <ogdf/cluster/sync_plan/ClusterPlanarity.h>
@@ -48,19 +50,46 @@
 
 using namespace ogdf::sync_plan::internal;
 
-bool ogdf::SyncPlanClusterPlanarityModule::isClusterPlanarDestructive(ClusterGraph& CG, Graph& G) {
-	sync_plan::SyncPlan SP(&G, &CG);
+bool ogdf::SyncPlanClusterPlanarityModule::isClusterPlanar(const ClusterGraph& CG) {
+	Graph Gcopy;
+	ClusterGraph CGcopy(CG, Gcopy);
+	sync_plan::SyncPlan SP(&Gcopy, &CGcopy);
 	return SP.makeReduced() && SP.solveReduced();
 }
 
-bool ogdf::SyncPlanClusterPlanarityModule::clusterPlanarEmbedClusterPlanarGraph(ClusterGraph& CG,
-		Graph& G) {
+bool ogdf::SyncPlanClusterPlanarityModule::isClusterPlanarDestructive(ClusterGraph& CG, Graph& G) {
 	sync_plan::SyncPlan SP(&G, &CG);
 	if (SP.makeReduced() && SP.solveReduced()) {
 		SP.embed();
 		return true;
 	} else {
 		return false;
+	}
+}
+
+bool ogdf::SyncPlanClusterPlanarityModule::clusterPlanarEmbedClusterPlanarGraph(ClusterGraph& CG,
+		Graph& G) {
+	sync_plan::SyncPlan SP(&G, &CG, m_augmentation);
+	if (SP.makeReduced() && SP.solveReduced()) {
+		SP.embed();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ogdf::SyncPlanClusterPlanarityModule::copyBackEmbedding(ogdf::ClusterGraph& CG, ogdf::Graph& G,
+		const ogdf::ClusterGraph& CGcopy, const ogdf::Graph& Gcopy,
+		const ogdf::ClusterArray<ogdf::cluster, true>& copyC,
+		const ogdf::NodeArray<ogdf::node, true>& copyN,
+		const ogdf::EdgeArray<ogdf::edge, true>& copyE,
+		const ogdf::EdgeArray<ogdf::edge, true>& origE) const {
+	ClusterPlanarityModule::copyBackEmbedding(CG, G, CGcopy, Gcopy, copyC, copyN, copyE, origE);
+	if (m_augmentation) {
+		for (auto& pair : *m_augmentation) {
+			pair.first = origE.mapEndpoint(pair.first);
+			pair.second = origE.mapEndpoint(pair.second);
+		}
 	}
 }
 
@@ -71,15 +100,17 @@ struct FrozenCluster {
 	int index = -1, parent = -1, parent_node = -1;
 	List<int> nodes;
 
-	FrozenCluster(int index, int parent) : index(index), parent(parent) { }
+	FrozenCluster(int _index, int _parent) : index(_index), parent(_parent) { }
 };
 
 class UndoInitCluster : public SyncPlan::UndoOperation {
 public:
 	ClusterGraph* cg;
 	List<FrozenCluster> clusters;
+	std::vector<std::pair<adjEntry, adjEntry>>* augmentation;
 
-	explicit UndoInitCluster(ClusterGraph* cg) : cg(cg) {
+	explicit UndoInitCluster(ClusterGraph* _cg, std::vector<std::pair<adjEntry, adjEntry>>* _aug)
+		: cg(_cg), augmentation(_aug) {
 		for (cluster c = cg->firstPostOrderCluster(); c != nullptr; c = c->pSucc()) {
 			auto it = clusters.emplaceFront(c->index(),
 					c->parent() != nullptr ? c->parent()->index() : -1);
@@ -89,7 +120,7 @@ public:
 		}
 	}
 
-	void processCluster(SyncPlan& pq, cluster c, int parent_node) {
+	void processCluster(SyncPlan& pq, cluster c, int parent_node, EdgeArray<int>& bicomps) {
 		node n = pq.nodeFromIndex(parent_node);
 		node t = pq.matchings.getTwin(n);
 		pq.log.lout(Logger::Level::Medium)
@@ -97,39 +128,111 @@ public:
 				<< " matched with " << pq.fmtPQNode(t, false) << " in the parent cluster "
 				<< c->parent() << std::endl;
 		Logger::Indent _(&pq.log);
-		pq.log.lout(Logger::Level::Minor) << c->nodes << std::endl;
 
-		PipeBij bij;
+		PipeBij bij; // first is parent cluster adj, second is adj in current cluster
 		pq.matchings.getIncidentEdgeBijection(t, bij);
 		pq.log.lout(Logger::Level::Minor) << printBijection(bij) << std::endl;
+
+		std::vector<int> to_augment;
+		if (augmentation != nullptr && !bij.empty()) {
+			auto& s = pq.log.lout(Logger::Level::Minor) << "Outer/Inner Block IDs: ";
+			int bc_nr1 = bicomps[bij.back().first];
+			int bc_nr2 = bicomps[bij.back().second];
+			int idx = 0;
+			std::set<int> seen {bc_nr1, bc_nr2};
+			for (const PipeBijPair& pair : bij) {
+				if (bicomps[pair.first] != bc_nr1) {
+					bc_nr1 = bicomps[pair.first];
+					// we are only augmenting the inside to be connected, the outside may be non-connected
+					// if (seen.count(bc_nr1) < 1) {
+					// to_augment.emplace_back(idx, false);
+					seen.insert(bc_nr1);
+					//}
+				}
+				if (bicomps[pair.second] != bc_nr2) {
+					bc_nr2 = bicomps[pair.second];
+					if (seen.count(bc_nr2) < 1) {
+						to_augment.emplace_back(idx);
+						seen.insert(bc_nr2);
+					}
+				}
+				s << bc_nr1 << (seen.count(bc_nr1) > 0 ? "s" : "n") << "/" << bc_nr2
+				  << (seen.count(bc_nr2) > 0 ? "s" : "n") << " ";
+				idx++;
+			}
+			s << std::endl;
+			pq.log.lout(Logger::Level::Minor)
+					<< "Will insert " << to_augment.size() << "/" << bij.size()
+					<< " augmentation edges: [" << printContainer(to_augment) << "]" << std::endl;
+		}
+
 		pq.matchings.removeMatching(n, t);
 		join(*pq.G, t, n, bij);
 		pq.log.lout(Logger::Level::Minor) << printEdges(bij) << std::endl;
 
-		for (const PipeBijPair& pair : bij) {
-			c->adjEntries.pushBack(pair.first->twin());
+		c->adjEntries.clear();
+		if (!bij.empty()) {
+			// only the adj in the parent cluster survived the join, take its twin to get the (new) adj in this cluster
+			adjEntry pred = bij.back().first->twin();
+			int bij_idx = 0;
+			int vec_idx = 0;
+			for (const PipeBijPair& pair : bij) {
+				adjEntry curr = pair.first->twin();
+				// generate embedding
+				c->adjEntries.pushBack(curr);
+
+				// also check whether we want to insert an augmentation edge here
+				if (vec_idx < to_augment.size() && to_augment[vec_idx] == bij_idx) {
+#ifdef OGDF_DEBUG
+					OGDF_ASSERT(augmentation != nullptr);
+					for (auto& apair : *augmentation) {
+						OGDF_ASSERT(!(apair.first->theNode() == pred->theNode()
+								&& apair.second->theNode() == curr->theNode()));
+						OGDF_ASSERT(!(apair.first->theNode() == curr->theNode()
+								&& apair.second->theNode() == pred->theNode()));
+					}
+#endif
+					augmentation->emplace_back(pred, curr);
+					vec_idx++;
+				}
+				bij_idx++;
+				pred = curr;
+			}
 		}
 	}
 
 	void undo(SyncPlan& pq) override {
-		OGDF_ASSERT(cg->numberOfClusters() == 1);
+		// OGDF_ASSERT(cg->numberOfClusters() == 1);
+		EdgeArray<int> bicomps;
+		if (augmentation != nullptr) {
+			bicomps.init(cg->constGraph(), -1);
+			biconnectedComponents(cg->constGraph(), bicomps);
+		}
 		cg->rootCluster()->adjEntries.clear();
 		ClusterArray<cluster> cluster_index(*cg, nullptr);
+		for (cluster c : cg->clusters) {
+			cluster_index[c] = c;
+		}
 		for (FrozenCluster& fc : clusters) {
 			cluster c;
 			if (fc.index == cg->rootCluster()->index()) {
 				OGDF_ASSERT(fc.parent == -1);
 				c = cg->rootCluster();
+				pq.log.lout(Logger::Level::Medium)
+						<< "Processing root cluster " << fc.index << std::endl;
 			} else {
 				OGDF_ASSERT(fc.parent >= 0);
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 				OGDF_ASSERT(cluster_index[fc.parent] != nullptr);
 				OGDF_ASSERT(cluster_index[fc.parent]->index() == fc.parent);
-				c = cg->newCluster(cluster_index[fc.parent], fc.index);
+				OGDF_ASSERT(cluster_index[fc.index]->index() == fc.index);
+				c = cluster_index[fc.index];
 #pragma GCC diagnostic pop
-				processCluster(pq, c, fc.parent_node);
+				processCluster(pq, c, fc.parent_node, bicomps);
 			}
+			pq.log.lout(Logger::Level::Minor)
+					<< "\tNodes in cluster: [" << printContainer(fc.nodes) << "]" << std::endl;
 			cluster_index[c] = c;
 			for (int n : fc.nodes) {
 				cg->reassignNode(pq.nodeFromIndex(n), c);
@@ -144,19 +247,23 @@ public:
 		}
 		cg->constGraph().consistencyCheck();
 		cg->consistencyCheck();
-		// OGDF_ASSERT(cg->representsCombEmbedding());
-		OGDF_ASSERT(isClusterPlanarEmbedding(*cg));
+		OGDF_ASSERT(cg->representsCombEmbedding());
 #endif
 	}
 
 	std::ostream& print(std::ostream& os) const override { return os << "UndoInitCluster"; }
 };
 
-SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
+SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg,
+		std::vector<std::pair<adjEntry, adjEntry>>* augmentation, ClusterGraphAttributes* cga)
 	: G(g)
 	, matchings(G)
 	, partitions(G)
 	, components(G)
+	, deletedEdges(*G)
+#ifdef OGDF_DEBUG
+	, deletedNodes(*G)
+#endif
 	, GA(cga)
 	, is_wheel(*G, false)
 #ifdef OGDF_DEBUG
@@ -166,7 +273,10 @@ SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
 	OGDF_ASSERT(cg->getGraph() == g);
 	undo_stack.pushBack(new ResetIndices(*this));
 
-	auto* op = new UndoInitCluster(cg);
+	if (augmentation != nullptr) {
+		augmentation->clear();
+	}
+	auto* op = new UndoInitCluster(cg, augmentation);
 	log.lout() << "Processing " << cg->clusters.size() << " clusters (max id "
 			   << cg->maxClusterIndex() << ") from " << cg->firstPostOrderCluster()->index()
 			   << " up to, but excluding root " << cg->rootCluster()->index() << "." << std::endl;
@@ -247,7 +357,6 @@ SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
 		while (!c->nodes.empty()) {
 			cg->reassignNode(c->nodes.front(), cg->rootCluster());
 		}
-		cg->delCluster(c);
 	}
 
 	initComponents();
@@ -255,8 +364,11 @@ SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
 	pushUndoOperationAndCheck(op);
 }
 
-void reduceLevelToCluster(const Graph& LG, const std::vector<std::vector<node>>& emb, Graph& G,
-		ClusterGraph& CG) {
+}
+
+void ogdf::reduceLevelPlanarityToClusterPlanarity(const Graph& LG,
+		const std::vector<std::vector<node>>& emb, Graph& G, ClusterGraph& CG,
+		EdgeArray<node>& embMap) {
 	NodeArray<std::pair<node, node>> map(LG);
 	cluster p = CG.rootCluster();
 	for (int l = emb.size() - 1; l >= 0; --l) {
@@ -268,7 +380,7 @@ void reduceLevelToCluster(const Graph& LG, const std::vector<std::vector<node>>&
 			CG.reassignNode(u, c);
 			CG.reassignNode(v, p);
 			map[n] = {u, v};
-			G.newEdge(u, v);
+			embMap[G.newEdge(u, v)] = n;
 		}
 		p = c;
 	}
@@ -277,4 +389,45 @@ void reduceLevelToCluster(const Graph& LG, const std::vector<std::vector<node>>&
 	}
 }
 
+void ogdf::insertAugmentationEdges(const ClusterGraph& CG, Graph& G,
+		std::vector<std::pair<adjEntry, adjEntry>>& augmentation, EdgeSet<>* added, bool embedded,
+		bool assert_minimal) {
+	if (embedded) {
+		OGDF_ASSERT(G.representsCombEmbedding());
+		OGDF_ASSERT(CG.adjAvailable());
+		OGDF_ASSERT(CG.representsCombEmbedding());
+	}
+	if (assert_minimal) {
+		OGDF_ASSERT(isCConnected(CG) == augmentation.empty());
+	}
+	int i = 0;
+	for (auto it = augmentation.rbegin(); it != augmentation.rend(); ++it) {
+		auto& pair = *it;
+		edge e = G.newEdge(pair.first, Direction::after, pair.second, Direction::before);
+		if (added != nullptr) {
+			added->insert(e);
+		}
+		if (embedded) {
+			cluster c1 = CG.clusterOf(pair.first->theNode());
+			cluster c2 = CG.clusterOf(pair.second->theNode());
+			if (c1 != c2) {
+				cluster p = CG.commonCluster(pair.first->theNode(), pair.second->theNode());
+				while (c1 != p) {
+					c1->adjEntries.insertAfter(e->adjSource(), c1->adjEntries.search(pair.first));
+					c1 = c1->parent();
+				}
+				while (c2 != p) {
+					c2->adjEntries.insertBefore(e->adjTarget(), c2->adjEntries.search(pair.second));
+					c2 = c2->parent();
+				}
+			}
+			OGDF_ASSERT(G.representsCombEmbedding());
+			OGDF_ASSERT(CG.representsCombEmbedding());
+		}
+		i++;
+		if (assert_minimal) {
+			bool last = (i == augmentation.size());
+			OGDF_ASSERT(isCConnected(CG) == last); // augmentation edge set should be minimal
+		}
+	}
 }

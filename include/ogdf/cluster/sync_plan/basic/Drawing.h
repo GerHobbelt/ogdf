@@ -30,29 +30,23 @@
  */
 #pragma once
 
-#include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphAttributes.h>
 
-#include <string>
+#include <array>
+#include <functional>
 
-namespace ogdf::sync_plan {
-class SyncPlan;
+namespace ogdf {
 
-class SyncPlanConsistency {
-	SyncPlan& pq;
-	SyncPlanDrawer draw;
-	int checkCounter = 0;
+extern const std::array<Color, 63> colors;
 
-public:
-	static bool doWriteOut;
+void spreadParallels(GraphAttributes& GA, double min_spread = 0.1, double max_spread = 0.6,
+		double max_abs = 100);
 
-	explicit SyncPlanConsistency(SyncPlan& _pq) : pq(_pq), draw(&_pq) {};
+void fixLoops(Graph& G, const std::function<void(edge, edge)>& cb);
 
-	bool consistencyCheck(bool force_check_components=false);
+void fixParallels(Graph& G, const std::function<void(edge, edge)>& cb);
 
-	void writeOut(std::string name = "", bool format = true, bool components = true);
+void bendEdge(GraphAttributes& GA, edge e, double bend);
 
-	void checkComponentRegeneration();
-
-	int getCheckCounter() const { return checkCounter; }
-};
 }

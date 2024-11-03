@@ -40,6 +40,7 @@
 #include <ogdf/basic/simple_graph_alg.h>
 #include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/planarity/PlanarizationGridLayout.h>
 #include <ogdf/planarlayout/SchnyderLayout.h>
 
@@ -275,8 +276,8 @@ class Clusterer {
 	tp stop;
 
 public:
-	Clusterer(ClusterGraph& CG, const RandomClusterConfig& config)
-		: CG(CG), config(config), copy(CG.constGraph()), clusters(copy, nullptr), mark(copy, false) {
+	Clusterer(ClusterGraph& _CG, const RandomClusterConfig& _config)
+		: CG(_CG), config(_config), copy(CG.constGraph()), clusters(copy, nullptr), mark(copy, false) {
 		OGDF_ASSERT(CG.getGraph()->representsCombEmbedding());
 		OGDF_ASSERT(CG.numberOfClusters() == 1);
 		CG.adjAvailable(true);
@@ -326,7 +327,7 @@ public:
 
 	void makeClusters() {
 		while (shouldAddCluster()) {
-			node n = copy.chooseNode([](node n) -> bool { return n->degree() > 0; });
+			node n = copy.chooseNode([](node u) -> bool { return u->degree() > 0; });
 			if (!n) {
 				break;
 			}
@@ -495,6 +496,50 @@ bool randomPlanarClustering(ClusterGraph& CG, const RandomClusterConfig& config)
 	return !c.timedout();
 }
 
+void randomClusterPlanarGraph(Graph& G, ClusterGraph& CG, int clusters, int node_per_cluster,
+		int edges_per_cluster) {
+	OGDF_ASSERT(&CG.constGraph() == &G);
+	// connected is ok as cut vertices will turn into disconnected clusters
+	randomPlanarConnectedGraph(G, node_per_cluster, edges_per_cluster);
+
+	for (int i = 0; i < clusters; ++i) {
+		node n = G.chooseNode([](node x) { return x->degree() >= 4; });
+		if (n == nullptr) {
+			break;
+		}
+		cluster c = CG.newCluster(CG.clusterOf(n));
+
+		Graph H;
+		randomPlanarConnectedGraph(H, node_per_cluster, edges_per_cluster);
+		node u = H.chooseNode([n](node x) { return x->degree() == n->degree(); });
+		if (u == nullptr) {
+			u = H.chooseNode([n](node x) { return x->degree() >= n->degree(); });
+			if (u != nullptr) {
+				while (u->degree() > n->degree()) {
+					H.delEdge(u->adjEntries.head()->theEdge());
+				}
+			} else {
+				CG.delCluster(c);
+				continue;
+			}
+		}
+		NodeArray<node> nodeMap(H, nullptr);
+		EdgeArray<edge> edgeMap(H, nullptr);
+		G.insert(H, nodeMap, edgeMap);
+
+		for (node x : H.nodes) {
+			CG.reassignNode(nodeMap[x], c);
+		}
+
+		node v = nodeMap[u];
+		OGDF_ASSERT(n->degree() == v->degree());
+		using namespace sync_plan;
+		PipeBij bij;
+		getPipeBijection(n, v, bij);
+		sync_plan::join(G, n, v, bij);
+	}
+}
+
 void randomSyncPlanInstance(sync_plan::SyncPlan& pq, int pipe_count, int min_deg) {
 	for (int i = 0; i < pipe_count; ++i) {
 		node u = pq.G->chooseNode(
@@ -515,16 +560,16 @@ void randomSyncPlanInstance(sync_plan::SyncPlan& pq, int pipe_count, int min_deg
 void addEdges(Graph* g, std::vector<edge>& added, int cnt) {
 	CombinatorialEmbedding E(*g);
 	for (int i = 0; i < cnt; ++i) {
-		face f = E.chooseFace([](face f) { return f->size() > 3; });
+		face f = E.chooseFace([](face ff) { return ff->size() > 3; });
 		if (f == nullptr) {
 			return;
 		}
 		adjEntry a = f->firstAdj();
-		for (int i = 0; i < randomNumber(0, f->size() - 1); ++i) {
+		for (int j = 0; j < randomNumber(0, f->size() - 1); ++j) {
 			a = a->faceCycleSucc();
 		}
 		adjEntry b = a;
-		for (int i = 0; i < randomNumber(2, f->size() - 2); ++i) {
+		for (int j = 0; j < randomNumber(2, f->size() - 2); ++j) {
 			b = b->faceCycleSucc();
 		}
 		OGDF_ASSERT(b != a);

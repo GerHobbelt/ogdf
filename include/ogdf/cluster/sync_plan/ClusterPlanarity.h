@@ -30,13 +30,34 @@
 */
 #pragma once
 
+#include <ogdf/basic/GraphSets.h>
 #include <ogdf/cluster/ClusterPlanarityModule.h>
 
 namespace ogdf {
 class OGDF_EXPORT SyncPlanClusterPlanarityModule : public ClusterPlanarityModule {
+	std::vector<std::pair<adjEntry, adjEntry>>* m_augmentation = nullptr;
+
 public:
+	bool isClusterPlanar(const ClusterGraph& CG) override;
 	bool isClusterPlanarDestructive(ClusterGraph& CG, Graph& G) override;
 	bool clusterPlanarEmbedClusterPlanarGraph(ClusterGraph& CG, Graph& G) override;
+
+	//! When set to a non-null pointer, will contain the augmentation edges to make the graph c-connected c-plane after calling clusterPlanarEmbed().
+	/*
+	 * @sa insertAugmentationEdges()
+	 */
+	void setStoreAugmentation(std::vector<std::pair<adjEntry, adjEntry>>* augmentation) {
+		m_augmentation = augmentation;
+	}
+
+	std::vector<std::pair<adjEntry, adjEntry>>* getStoreAugmentation() const {
+		return m_augmentation;
+	}
+
+protected:
+	void copyBackEmbedding(ClusterGraph& CG, Graph& G, const ClusterGraph& CGcopy, const Graph& Gcopy,
+			const ClusterArray<cluster, true>& copyC, const NodeArray<node, true>& copyN,
+			const EdgeArray<edge, true>& copyE, const EdgeArray<edge, true>& origE) const override;
 };
 
 //! Perform the reduction from level- to cluster planarity.
@@ -45,7 +66,24 @@ public:
  * @param emb the level assignment, containing a list of its contained nodes for each level.
  * @param G will be assigned the graph resulting from the reduction.
  * @param CG will be assigned the clustering resulting from the reduction.
+ * @param embMap maps from some edges in \p G to the nodes of \p LG,
+ * 		  the order in which they cross the borders of \p CG will induce a cluster planar embedding
  */
 OGDF_EXPORT void reduceLevelPlanarityToClusterPlanarity(const Graph& LG,
-		const std::vector<std::vector<node>>& emb, Graph& G, ClusterGraph& CG);
+		const std::vector<std::vector<node>>& emb, Graph& G, ClusterGraph& CG,
+		EdgeArray<node>& embMap);
+
+//! Inserts augmentation edges to make a c-plane graph c-connected while maintaining the combinatorial embedding.
+/**
+ * @param CG the ClusterGraph.
+ * @param G the corresponding Graph.
+ * @param augmentation a list of adjEntry pairs pointing to (before) the start and (after) the end point of the augmentation edges.
+ * @param added if non-null, will be assigned all newly added edges.
+ * @param embedded whether CG represents a c-plane embedding that need to be maintained throughout the insertion.
+ * @param assert_minimal whether we should assert that the set of augmentation edges is minimal for c-connectivity.
+ */
+OGDF_EXPORT void insertAugmentationEdges(const ClusterGraph& CG, Graph& G,
+		std::vector<std::pair<adjEntry, adjEntry>>& augmentation, EdgeSet<>* added = nullptr,
+		bool embedded = true,bool assert_minimal = true);
+
 }

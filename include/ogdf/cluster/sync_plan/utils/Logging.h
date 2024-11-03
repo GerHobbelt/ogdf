@@ -45,16 +45,15 @@
 	template<typename Container>                                                         \
 	struct NAME {                                                                        \
 		const Container& container;                                                      \
-		explicit NAME(const Container& container) : container(container) { }             \
+		explicit NAME(const Container& _container) : container(_container) { }           \
 		template<typename ContainerT>                                                    \
 		friend std::ostream& operator<<(std::ostream& os, const NAME<ContainerT>& inst); \
 	}
 
-namespace ogdf::sync_plan {
-namespace internal {
+// all operators will only be found when `using sync_plan::internal`, so no namespace pollution
+namespace ogdf::sync_plan::internal {
 std::string to_string(const std::function<std::ostream&(std::ostream&)>& func);
 
-// will only be found when `using internal`, so no namespace pollution
 std::ostream& operator<<(std::ostream& os, const std::function<std::ostream&(std::ostream&)>& func);
 
 template<typename T1, typename T2>
@@ -65,7 +64,8 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& pair) {
 std::ostream& operator<<(std::ostream& os, const ogdf::Graph& G);
 
 std::ostream& operator<<(std::ostream& os, const ogdf::ClusterGraph& CG);
-}
+
+OGDF_CONTAINER_PRINTER(printContainer);
 
 OGDF_CONTAINER_PRINTER(printIncidentEdges);
 
@@ -74,6 +74,16 @@ OGDF_CONTAINER_PRINTER(printEdges);
 OGDF_CONTAINER_PRINTER(printBijection);
 
 OGDF_CONTAINER_PRINTER(printFrozenBijection);
+
+template<typename Container>
+std::ostream& operator<<(std::ostream& os, const printContainer<Container>& inst) {
+	bool first = true;
+	for (const auto& entry : inst.container) {
+		os << (first ? "" : ", ") << entry;
+		first = false;
+	}
+	return os;
+}
 
 template<typename Container>
 std::ostream& operator<<(std::ostream& os, const printIncidentEdges<Container>& inst) {

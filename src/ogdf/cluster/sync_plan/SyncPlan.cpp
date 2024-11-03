@@ -43,6 +43,7 @@
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
+#include <ogdf/cluster/sync_plan/basic/Drawing.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/decomposition/BCTree.h>
 
@@ -66,6 +67,10 @@ SyncPlan::SyncPlan(Graph* g, GraphAttributes* ga)
 	, matchings(G)
 	, partitions(G)
 	, components(G)
+	, deletedEdges(*G)
+#ifdef OGDF_DEBUG
+	, deletedNodes(*G)
+#endif
 	, GA(ga)
 	, is_wheel(*G, false)
 #ifdef OGDF_DEBUG
@@ -89,6 +94,13 @@ void SyncPlan::formatNode(node n) const {
 	if (GA == nullptr) {
 		return;
 	}
+#ifdef OGDF_DEBUG
+	if (deletedNodes.isMember(n)) {
+		GA->width(n) = 0;
+		GA->height(n) = 0;
+		return;
+	}
+#endif
 	ogdf::sync_plan::formatNode(n, GA, components.biconnectedId(n));
 	if (matchings.isMatchedPVertex(n)) {
 		GA->width(n) = 10;
@@ -160,9 +172,8 @@ void SyncPlan::printOPStatsStart(const Pipe* p, Operation op, const NodePCRotati
 	} else {
 		stats_first_in_array = false;
 	}
-	stats_out << "{\"op\":\"" << op << "\""
-			  << ",\"rem_pipes\":" << matchings.getPipeCount() << ",\"deg\":" << p->degree()
-			  << ",\"u_cv\":" << components.isCutVertex(p->node1)
+	stats_out << "{\"op\":\"" << op << "\"" << ",\"rem_pipes\":" << matchings.getPipeCount()
+			  << ",\"deg\":" << p->degree() << ",\"u_cv\":" << components.isCutVertex(p->node1)
 			  << ",\"u_blocks\":" << components.biconnectedComponent(p->node1)->degree()
 			  << ",\"u_bicon_size\":" << components.bcSize(components.biconnectedComponent(p->node1))
 			  << ",\"u_bc_id\":" << components.biconnectedId(p->node1)
@@ -211,10 +222,15 @@ bool SyncPlan::canContract(const Pipe* p) {
 }
 
 std::ostream& operator<<(std::ostream& os, const SyncPlan& pq) {
-	return os << "SyncPlan Instance with " << pq.G->numberOfNodes() << " nodes, "
-			  << pq.G->numberOfEdges() << " edges, " << pq.matchings.getPipeCount() << " pipes, "
-			  << pq.partitions.qVertexCount() << " Q-Vertices in " << pq.partitions.partitionCount()
-			  << " partitions and " << pq.components.connectedCount() << " connected components";
+	os << "SyncPlan Instance with " << pq.G->numberOfNodes() << " nodes, " << pq.G->numberOfEdges()
+	   << " edges, " << pq.matchings.getPipeCount() << " pipes";
+	PipeQueue* queue = pq.matchings.getPipeQueue();
+	if (queue) {
+		os << " (max degree " << queue->getTop()->degree() << ")";
+	}
+	return os << ", " << pq.partitions.qVertexCount() << " Q-Vertices in "
+			  << pq.partitions.partitionCount() << " partitions and "
+			  << pq.components.connectedCount() << " connected components";
 }
 
 std::ostream& operator<<(std::ostream& os, const SyncPlan::UndoOperation& undo_op) {

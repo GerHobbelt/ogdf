@@ -509,7 +509,7 @@ public:
 	 * @param parent is the parent of the new cluster.
 	 * \return the created cluster.
 	 */
-	cluster createCluster(SList<node>& nodes, const cluster parent = nullptr);
+	cluster createCluster(const SList<node>& nodes, const cluster parent = nullptr);
 
 	//! Deletes cluster \p c.
 	/**
@@ -578,6 +578,17 @@ public:
 	 * @name Cluster tree queries
 	 */
 	//! @{
+
+	/**
+	 * Returns a random cluster.
+	 *
+	 * \c nullptr is returned if no feasible cluster exists.
+	 *
+	 * @see chooseIteratorFrom
+	 */
+	cluster chooseCluster(
+			std::function<bool(cluster)> includeCluster = [](cluster) { return true; },
+			bool isFastTest = true) const;
 
 	//! Turns automatic update of node depth values on or off.
 	void setUpdateDepth(bool b) const {
@@ -801,11 +812,11 @@ protected:
 
 	//! Creates new cluster containing nodes in parameter list
 	//! with index \p clusterId.
-	cluster doCreateCluster(SList<node>& nodes, const cluster parent, int clusterId = -1);
+	cluster doCreateCluster(const SList<node>& nodes, const cluster parent, int clusterId = -1);
 
 	//! Creates new cluster containing nodes in parameter list and
 	//! stores resulting empty clusters in list, cluster has index \p clusterId.
-	cluster doCreateCluster(SList<node>& nodes, SList<cluster>& emptyCluster, const cluster parent,
+	cluster doCreateCluster(const SList<node>& nodes, SList<cluster>& emptyCluster, const cluster parent,
 			int clusterId = -1);
 
 	//! Clears all cluster data.
@@ -971,6 +982,6 @@ OGDF_EXPORT std::ostream& operator<<(std::ostream& os, cluster c);
  */
 OGDF_EXPORT void planarizeClusterBorderCrossings(const ClusterGraph& CG, Graph& G,
 		EdgeArray<List<std::pair<adjEntry, cluster>>>* subdivisions,
-		const std::function<edge(edge)>& translate) ;
+		const std::function<edge(edge)>& translate);
 
 }

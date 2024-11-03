@@ -41,12 +41,13 @@
 #include <ostream>
 
 namespace ogdf::sync_plan {
+using namespace ogdf::sync_plan::internal;
 
-Pipe::Pipe(node node1, node node2)
-	: node1(node1)
-	, node2(node2)
+Pipe::Pipe(node _node1, node _node2)
+	: node1(_node1)
+	, node2(_node2)
 #ifdef OGDF_DEBUG
-	, dbg_degree(node1->degree())
+	, dbg_degree(_node1->degree())
 #endif
 {
 }
@@ -209,7 +210,7 @@ std::function<std::ostream&(std::ostream&)> PMatching::printBijection(node u) co
 	const auto bij = getIncidentEdgeBijection(u);
 	return [u, v, bij](std::ostream& ss) -> std::ostream& {
 		return ss << "u" << u->index() << " = v" << v->index() << ": "
-				  << sync_plan::printBijection(bij);
+				  << sync_plan::internal::printBijection(bij);
 	};
 }
 
