@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Utilities for printing stuff to output streams.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -31,7 +31,6 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
-#include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 
 #include <functional>
@@ -40,6 +39,9 @@
 #include <string>
 #include <utility>
 
+namespace ogdf {
+class ClusterGraph;
+} // namespace ogdf
 
 #define OGDF_CONTAINER_PRINTER(NAME)                                                     \
 	template<typename Container>                                                         \
@@ -50,20 +52,21 @@
 		friend std::ostream& operator<<(std::ostream& os, const NAME<ContainerT>& inst); \
 	}
 
-// all operators will only be found when `using sync_plan::internal`, so no namespace pollution
+//! all operators will only be found when `using sync_plan::internal`, so no namespace pollution
 namespace ogdf::sync_plan::internal {
-std::string to_string(const std::function<std::ostream&(std::ostream&)>& func);
+OGDF_EXPORT std::string to_string(const std::function<std::ostream&(std::ostream&)>& func);
 
-std::ostream& operator<<(std::ostream& os, const std::function<std::ostream&(std::ostream&)>& func);
+OGDF_EXPORT std::ostream& operator<<(std::ostream& os,
+		const std::function<std::ostream&(std::ostream&)>& func);
 
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& pair) {
 	return os << "(" << pair.first << ", " << pair.second << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const ogdf::Graph& G);
+OGDF_EXPORT std::ostream& operator<<(std::ostream& os, const ogdf::Graph& G);
 
-std::ostream& operator<<(std::ostream& os, const ogdf::ClusterGraph& CG);
+OGDF_EXPORT std::ostream& operator<<(std::ostream& os, const ogdf::ClusterGraph& CG);
 
 OGDF_CONTAINER_PRINTER(printContainer);
 

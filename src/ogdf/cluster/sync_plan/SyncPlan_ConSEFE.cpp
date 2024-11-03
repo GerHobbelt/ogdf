@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the Connected 2-SEFE-related functionality of SyncPlan.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -29,7 +29,9 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 #include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphCopy.h>
 #include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
 #include <ogdf/basic/basic.h>
 #include <ogdf/basic/simple_graph_alg.h>
 #include <ogdf/cluster/sync_plan/PMatching.h>
@@ -37,7 +39,10 @@
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 
 #include <cstdint>
+#include <functional>
+#include <ostream>
 #include <stdexcept>
+#include <vector>
 
 using namespace ogdf::sync_plan::internal;
 

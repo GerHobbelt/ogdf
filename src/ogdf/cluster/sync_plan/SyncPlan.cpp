@@ -1,6 +1,4 @@
 /** \file
- * \brief TODO Document
- *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
@@ -30,6 +28,7 @@
  */
 #include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphSets.h>
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/basic.h>
 #include <ogdf/basic/graphics.h>
@@ -55,8 +54,6 @@
 #include <string>
 #include <tuple>
 #include <typeinfo>
-
-#include <cxxabi.h>
 
 using namespace ogdf::sync_plan::internal;
 
@@ -114,7 +111,7 @@ void SyncPlan::formatNode(node n) const {
 	}
 }
 
-PipeType SyncPlan::getPipeType(const Pipe* p) {
+PipeType SyncPlan::getPipeType(const Pipe* p) const {
 	OGDF_ASSERT(p != nullptr);
 	if (components.isCutVertex(p->node1)) {
 		if (components.isCutVertex(p->node2)) {
@@ -172,8 +169,9 @@ void SyncPlan::printOPStatsStart(const Pipe* p, Operation op, const NodePCRotati
 	} else {
 		stats_first_in_array = false;
 	}
-	stats_out << "{\"op\":\"" << op << "\"" << ",\"rem_pipes\":" << matchings.getPipeCount()
-			  << ",\"deg\":" << p->degree() << ",\"u_cv\":" << components.isCutVertex(p->node1)
+	stats_out << "{\"op\":\"" << op << "\""
+			  << ",\"rem_pipes\":" << matchings.getPipeCount() << ",\"deg\":" << p->degree()
+			  << ",\"u_cv\":" << components.isCutVertex(p->node1)
 			  << ",\"u_blocks\":" << components.biconnectedComponent(p->node1)->degree()
 			  << ",\"u_bicon_size\":" << components.bcSize(components.biconnectedComponent(p->node1))
 			  << ",\"u_bc_id\":" << components.biconnectedId(p->node1)
@@ -203,7 +201,7 @@ void SyncPlan::printOPStatsEnd(bool success, int64_t time_ns) {
 
 #endif
 
-bool SyncPlan::canContract(const Pipe* p) {
+bool SyncPlan::canContract(const Pipe* p) const {
 	if (p == nullptr) {
 		return false;
 	}
@@ -318,16 +316,6 @@ std::ostream& SyncPlan::ResetIndices::print(std::ostream& os) const {
 			  << ", count_node " << count_node << ", count_edge " << count_edge << ")";
 }
 
-std::string SyncPlan::UndoOperation::name() const {
-	int status = 0;
-	char* ret = abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, &status);
-	if (status != 0) {
-		throw std::runtime_error("cxa_demangle error status code " + std::to_string(status));
-	}
-	std::string str {ret};
-	free(ret);
-	OGDF_ASSERT(!str.empty());
-	return str;
-}
+std::string SyncPlan::UndoOperation::name() const { return typeid(*this).name(); }
 
 }

@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the SyncPlan::solve operation
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -30,6 +30,7 @@
  */
 #include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/GraphSets.h>
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/Logger.h>
 #include <ogdf/basic/basic.h>
@@ -39,9 +40,9 @@
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/SyncPlanConsistency.h>
+#include <ogdf/cluster/sync_plan/SyncPlan_solve/BlockEmbedding.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 #include <ogdf/cluster/sync_plan/basic/TwoSAT.h>
-#include <ogdf/cluster/sync_plan/solve/BlockEmbedding.h>
 #include <ogdf/decomposition/Skeleton.h>
 #include <ogdf/decomposition/StaticPlanarSPQRTree.h>
 

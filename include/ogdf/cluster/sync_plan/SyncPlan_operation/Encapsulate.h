@@ -1,7 +1,7 @@
 /** \file
- * \brief Declaration of the Random Hierarchy graph generator.
+ * \brief Utilities for the SyncPlan::encapsulate() operation.
  *
- * \author Carsten Gutwenger, Christoph Buchheim
+ * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
  * This file is part of the Open Graph Drawing Framework (OGDF).
@@ -28,37 +28,25 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-
 #pragma once
 
 #include <ogdf/basic/Graph.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 
-namespace ogdf {
+#include <ostream>
 
-/**
- * @addtogroup graph-generators
- * @{
- */
+namespace ogdf::sync_plan::internal {
 
-//! @name Randomized graph generators
-//! @{
+//! Information on a single block adjacent to a cut-vertex that is about to be encapsulated.
+struct EncapsulatedBlock {
+	node bicon = nullptr;
+	node bicon_rep = nullptr;
+	node star_rep = nullptr;
+	PipeBij bij;
 
-//! Creates a random hierarchical graph.
-/**
- * @param G is assigned the generated graph.
- * @param n is the number of nodes.
- * @param m is the number of edges.
- * @param planar determines if the resulting graph is (level-)planar.
- * @param singleSource determines if the graph is a single-source graph.
- * @param longEdges determines if the graph has long edges (spanning 2 layers
- *        or more); otherwise the graph is proper.
- * @sa randomProperMaximalLevelPlaneGraph() for a simpler alternative
- */
-OGDF_EXPORT void randomHierarchy(Graph& G, int n, int m, bool planar, bool singleSource,
-		bool longEdges);
+	explicit EncapsulatedBlock(node _bicon) : bicon(_bicon) { }
 
-//! @}
-
-/** @} */
+	friend std::ostream& operator<<(std::ostream& os, const EncapsulatedBlock& block);
+};
 
 }

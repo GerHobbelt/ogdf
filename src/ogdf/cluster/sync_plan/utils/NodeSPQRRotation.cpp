@@ -1,6 +1,4 @@
 /** \file
- * \brief TODO Document
- *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
@@ -97,7 +95,7 @@ node NodeSPQRRotation::findSPQRApex(node n, bool clear) {
 	// find subtree with edges incident to max_deg
 	SList<node> todo;
 
-	int reals = 0;
+	OGDF_IF_DBG(int reals = 0);
 	for (adjEntry adj : n->adjEntries) {
 		bool is_virt = spqr.twinEdge(adj->theEdge()) != nullptr;
 		bool is_real = spqr.original(adj->theEdge()) != nullptr;
@@ -112,7 +110,7 @@ node NodeSPQRRotation::findSPQRApex(node n, bool clear) {
 		if (is_virt) {
 			continue;
 		}
-		reals++;
+		OGDF_IF_DBG(reals++);
 
 		if (clear) {
 			if (highest_with_edges[t] != nullptr) {
@@ -198,9 +196,9 @@ pc_tree::PCNode* NodeSPQRRotation::makePCNode(node t, node t_parent, pc_tree::PC
 	OGDF_ASSERT(highest_with_edges[t] != nullptr); // check that arrays haven't been cleared yet
 	pc_tree::PCNode* n;
 	logm << spqr.typeOfTNode(t) << "-node " << t->index() << " containing "
-		<< spqr.hEdgesSPQR(t).size() << " edges. Target node has " << edges[t].size()
-		<< " real edges and " << children[t].size() << " (<= °" << t->degree() << ") children."
-		<< std::endl;
+		 << spqr.hEdgesSPQR(t).size() << " edges. Target node has " << edges[t].size()
+		 << " real edges and " << children[t].size() << " (<= °" << t->degree() << ") children."
+		 << std::endl;
 	auto& l = logd << " ";
 	for (edge e : spqr.hEdgesSPQR(t)) {
 		l << " " << (spqr.twinEdge(e) == nullptr ? "r" : "v") << e->index() << " " << e;
@@ -247,8 +245,8 @@ pc_tree::PCNode* NodeSPQRRotation::makePCNode(node t, node t_parent, pc_tree::PC
 	if (gn != nullptr) {
 		node ggn = spqr.original(gn);
 		logm << "H-Graph node for P-node is node " << gn->index() << " of degree " << gn->degree()
-			<< " actual G-Graph node will be " << ggn->index() << " of degree " << ggn->degree()
-			<< std::endl;
+			 << " actual G-Graph node will be " << ggn->index() << " of degree " << ggn->degree()
+			 << std::endl;
 	}
 
 	if (spqr.typeOfTNode(t) == DynamicSPQRForest::TNodeType::RComp) {
@@ -272,7 +270,7 @@ pc_tree::PCNode* NodeSPQRRotation::makePCNode(node t, node t_parent, pc_tree::PC
 		}
 
 		logd << "Children identified by tree were:" << std::endl;
-		Logger::Indent _(log);
+		Logger::Indent __(log);
 		for (adjEntry adj : edges[t]) {
 			logd << "Adj " << adj->index() << " " << adj << std::endl;
 		}
@@ -324,7 +322,9 @@ void NodeSPQRRotation::mapPartnerEdges() {
 	OGDF_ASSERT(spqr.typeOfTNode(pnode) == DynamicSPQRForest::TNodeType::PComp);
 	OGDF_ASSERT(spqr.hEdgesSPQR(pnode).size() == getLeafCount());
 
+#ifdef OGDF_DEBUG
 	int reals = 0, reals2 = 0, bundle = 0;
+#endif
 	for (edge e : spqr.hEdgesSPQR(pnode)) {
 		bool is_virt = spqr.twinEdge(e) != nullptr;
 		bool is_real = spqr.original(e) != nullptr;
@@ -334,7 +334,7 @@ void NodeSPQRRotation::mapPartnerEdges() {
 			OGDF_ASSERT(l != nullptr);
 			OGDF_ASSERT(m_bundleEdgesForLeaf[l].empty());
 			m_bundleEdgesForLeaf[l].pushBack(e);
-			reals++;
+			OGDF_IF_DBG(reals++);
 			continue;
 		}
 		node snode = spqr.spqrNodeOf(spqr.twinEdge(e));
@@ -352,7 +352,7 @@ void NodeSPQRRotation::mapPartnerEdges() {
 			continue;
 		}
 		if (adj->twinNode() == m_n) {
-			reals2++;
+			OGDF_IF_DBG(reals2++);
 			continue;
 		}
 		// only process real edges that are not incident to first pole
@@ -370,7 +370,7 @@ void NodeSPQRRotation::mapPartnerEdges() {
 		OGDF_ASSERT(spqr.typeOfTNode(tn) == DynamicSPQRForest::TNodeType::SComp);
 		OGDF_ASSERT(snodes[tn] != nullptr);
 		m_bundleEdgesForLeaf[snodes[tn]].pushBack(adj->theEdge());
-		bundle++;
+		OGDF_IF_DBG(bundle++);
 	}
 	OGDF_ASSERT(reals == reals2);
 	if (spqr.typeOfGNode(spqr.original(pole)) == BCTree::GNodeType::Normal) {

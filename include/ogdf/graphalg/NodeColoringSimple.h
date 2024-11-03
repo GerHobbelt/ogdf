@@ -1,7 +1,7 @@
 /** \file
- * \brief TODO Document
+ * \brief Trivial node coloring which assigns every node a different color.
  *
- * \author Simon D. Fink <ogdf@niko.fink.bayern>
+ * \author Jan-Niklas Buckow
  *
  * \par License:
  * This file is part of the Open Graph Drawing Framework (OGDF).
@@ -28,24 +28,26 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+
 #pragma once
 
-#include <ogdf/basic/Graph.h>
-#include <ogdf/cluster/sync_plan/utils/Bijection.h>
+#include <ogdf/graphalg/NodeColoringModule.h>
 
-#include <ostream>
+namespace ogdf {
 
-namespace ogdf::sync_plan::internal {
-
-struct EncapsulatedBlock {
-	node bicon = nullptr;
-	node bicon_rep = nullptr;
-	node star_rep = nullptr;
-	PipeBij bij;
-
-	explicit EncapsulatedBlock(node _bicon) : bicon(_bicon) { }
-
-	friend std::ostream& operator<<(std::ostream& os, const EncapsulatedBlock& block);
+/**
+ * Approximation algorithms for the node coloring problem in graphs.
+ * This is the trivial coloring which assigns every node a different color.
+ */
+class NodeColoringSimple : public NodeColoringModule {
+public:
+    virtual NodeColor call(const Graph& graph, NodeArray<NodeColor>& colors, NodeColor start = 0) override {
+        NodeColor numberColorsUsed = NodeColor(graph.numberOfNodes());
+        for (node v : graph.nodes) {
+            colors[v] = start++;
+        }
+        OGDF_ASSERT(checkColoring(graph, colors));
+        return numberColorsUsed;
+    }
 };
-
 }

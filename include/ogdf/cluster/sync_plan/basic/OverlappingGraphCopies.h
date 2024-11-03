@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Multiple GraphCopies that contain different, overlapping parts of the same original graph. TODO should be moved to a central location.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -40,7 +40,8 @@ namespace ogdf {
 class OverlappingGraphCopies;
 
 // room for improvement: common interface with GraphCopyBase, add auto-linking ::insert method
-class OverlappingGraphCopy : public Graph {
+//! Version of GraphCopySimple that may efficiently share some overlap with other instances of the same original Graph via its OverlappingGraphCopies manager.
+class OGDF_EXPORT OverlappingGraphCopy : public Graph {
 	friend class OverlappingGraphCopies;
 
 	OverlappingGraphCopies* m_pOGC; //!< The master instance.
@@ -195,19 +196,33 @@ public:
 	}
 };
 
-class OverlappingGraphCopies {
+//! The manager class for multiple OverlappingGraphCopy instances of the same graph.
+/**
+ * This is similar to using multiple GraphCopySimple instances for a single graph, but is more efficient
+ * storage-wise and easily allows enumerating in which copies a node or edge occurs.
+ */
+class OGDF_EXPORT OverlappingGraphCopies {
 	friend class OverlappingGraphCopy;
+	using NA = NodeMultiArray<const OverlappingGraphCopy*, node>;
+	using EA = EdgeMultiArray<const OverlappingGraphCopy*, edge>;
 
 	const Graph* m_G;
-	mutable NodeMultiArray<const OverlappingGraphCopy*, node> m_node_copies;
-	mutable EdgeMultiArray<const OverlappingGraphCopy*, edge> m_edge_copies;
+	NA m_node_copies;
+	EA m_edge_copies;
 
 public:
-	explicit OverlappingGraphCopies(const Graph& G) : m_G(&G), m_node_copies(G), m_edge_copies(G) { }
+	explicit OverlappingGraphCopies(const Graph& G)
+		: m_G(&G), m_node_copies(G), m_edge_copies(G) { }
 
 	OGDF_NO_COPY(OverlappingGraphCopies)
 
 	OGDF_NO_MOVE(OverlappingGraphCopies)
+
+	const NA::EntryType& copies(node n) const { return m_node_copies.get_all(n); }
+
+	const EA::EntryType& copies(edge e) const { return m_edge_copies.get_all(e); }
+
+	const Graph* constGraph() const { return m_G; }
 };
 
 }

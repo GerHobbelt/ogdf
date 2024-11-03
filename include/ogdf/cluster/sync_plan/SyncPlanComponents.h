@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief (Bi)Connected components information maintained during the SyncPlan algorithm.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -53,7 +53,8 @@ namespace internal {
 struct EncapsulatedBlock;
 }
 
-class SyncPlanComponents {
+//! (Bi)Connected components information maintained during the SyncPlan algorithm.
+class OGDF_EXPORT SyncPlanComponents {
 	friend class SyncPlan;
 
 	friend class SyncPlanConsistency;
@@ -152,7 +153,8 @@ private:
 	void labelIsolatedNodes();
 };
 
-class BiconnectedIsolation {
+//! Hides all (edges leading to) adjacent biconnected components without changing the current embedding.
+class OGDF_EXPORT BiconnectedIsolation {
 	SyncPlanComponents& m_comps;
 	node m_bicon;
 	NodeSet<true> m_to_restore;

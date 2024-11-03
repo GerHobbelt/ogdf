@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Derive embedding trees from an DynamicSPQRForest. Warning: breaks on certain parallel edge configurations!
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -53,7 +53,8 @@ class SList;
 
 namespace ogdf::sync_plan {
 
-class NodeSPQRRotation : public pc_tree::NodePCRotation {
+//! Derive embedding trees from an DynamicSPQRForest. Warning: breaks on certain parallel edge configurations!
+class OGDF_EXPORT NodeSPQRRotation : public pc_tree::NodePCRotation {
 protected:
 	const DynamicSPQRForest& spqr;
 	node apex;

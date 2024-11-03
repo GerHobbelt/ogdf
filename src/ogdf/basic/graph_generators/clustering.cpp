@@ -1,50 +1,58 @@
 /** \file
-* \brief Implementation of some randomized clustering generators
-*
-* \author Carsten Gutwenger, Markus Chimani, Jöran Schierbaum, Simon D. Fink
-*
-* \par License:
-* This file is part of the Open Graph Drawing Framework (OGDF).
-*
-* \par
-* Copyright (C)<br>
-* See README.md in the OGDF root directory for details.
-*
-* \par
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* Version 2 or 3 as published by the Free Software Foundation;
-* see the file LICENSE.txt included in the packaging of this file
-* for details.
-*
-* \par
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* \par
-* You should have received a copy of the GNU General Public
-* License along with this program; if not, see
-* http://www.gnu.org/copyleft/gpl.html
-*/
+ * \brief Implementation of some randomized clustering generators
+ *
+ * \author Carsten Gutwenger, Markus Chimani, Jöran Schierbaum, Simon D. Fink
+ *
+ * \par License:
+ * This file is part of the Open Graph Drawing Framework (OGDF).
+ *
+ * \par
+ * Copyright (C)<br>
+ * See README.md in the OGDF root directory for details.
+ *
+ * \par
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * Version 2 or 3 as published by the Free Software Foundation;
+ * see the file LICENSE.txt included in the packaging of this file
+ * for details.
+ *
+ * \par
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * \par
+ * You should have received a copy of the GNU General Public
+ * License along with this program; if not, see
+ * http://www.gnu.org/copyleft/gpl.html
+ */
 
-#include <ogdf/basic/Array2D.h>
+
+#include <ogdf/basic/Array.h>
 #include <ogdf/basic/CombinatorialEmbedding.h>
-#include <ogdf/basic/FaceArray.h>
-#include <ogdf/basic/Math.h>
-#include <ogdf/basic/extended_graph_alg.h>
-#include <ogdf/basic/geometry.h>
-#include <ogdf/basic/graph_generators.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphCopy.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/basic/graph_generators/clustering.h>
+#include <ogdf/basic/graph_generators/randomized.h>
 #include <ogdf/basic/simple_graph_alg.h>
 #include <ogdf/cluster/ClusterGraph.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
-#include <ogdf/planarity/PlanarizationGridLayout.h>
-#include <ogdf/planarlayout/SchnyderLayout.h>
 
+#include <cstdint>
+#include <functional>
+#include <ostream>
+#include <random>
 #include <unordered_set>
+#include <vector>
+
 using std::minstd_rand;
 using std::uniform_int_distribution;
 using std::uniform_real_distribution;
@@ -258,10 +266,12 @@ void randomClustering(ClusterGraph& C, const node root, int moreInLeaves) {
 
 std::ostream& operator<<(std::ostream& os, const RandomClusterConfig& config) {
 	os << "max_nodes_in_cluster: " << config.max_nodes_in_cluster
-	   << " prob_no_further_node: " << config.prob_no_further_node << " (" << config.expected_nodes()
-	   << ")" << " prob_no_further_cluster: " << config.prob_no_further_cluster << " ("
-	   << 1.0 / config.prob_no_further_cluster << ")" << " max_clusters: " << config.max_clusters
-	   << " min_root_nodes: " << config.min_root_nodes << " timeout: " << config.timeout;
+	   << " prob_no_further_node: " << config.prob_no_further_node << " ("
+	   << config.expected_nodes() << ")"
+	   << " prob_no_further_cluster: " << config.prob_no_further_cluster << " ("
+	   << 1.0 / config.prob_no_further_cluster << ")"
+	   << " max_clusters: " << config.max_clusters << " min_root_nodes: " << config.min_root_nodes
+	   << " timeout: " << config.timeout;
 	return os;
 }
 

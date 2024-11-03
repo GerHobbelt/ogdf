@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the SyncPlan::encapsulate operation and its UndoOperation.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -34,11 +34,11 @@
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/Logger.h>
 #include <ogdf/basic/basic.h>
+#include <ogdf/basic/pctree/util/FilteringBFS.h>
 #include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
-#include <ogdf/basic/pctree/util/FilteringBFS.h>
-#include <ogdf/cluster/sync_plan/operation/Encapsulate.h>
+#include <ogdf/cluster/sync_plan/SyncPlan_operation/Encapsulate.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
@@ -51,10 +51,12 @@ using namespace ogdf::sync_plan::internal;
 namespace ogdf::sync_plan {
 using internal::operator<<;
 
+namespace internal {
 std::ostream& operator<<(std::ostream& os, const EncapsulatedBlock& block) {
 	os << "EncapsulatedBlock(bicon=" << block.bicon << ", bicon_rep=" << block.bicon_rep
 	   << ", star_rep=" << block.star_rep << ", bij=" << printBijection(block.bij) << ")";
 	return os;
+}
 }
 
 class UndoEncapsulate : public SyncPlan::UndoOperation {
@@ -77,7 +79,7 @@ public:
 			node v = pq.nodeFromIndex(pipe.second);
 			pq.log.lout() << "Joining pipe matching " << pq.fmtPQNode(u, false) << " with "
 						  << pq.fmtPQNode(v, false) << "." << std::endl;
-			Logger::Indent _(&pq.log);
+			Logger::Indent __(&pq.log);
 			pq.log.lout(Logger::Level::Medium) << pq.matchings.printBijection(u) << std::endl;
 			PipeBij bij;
 			pq.matchings.getIncidentEdgeBijection(u, bij);
@@ -132,7 +134,7 @@ SyncPlan::Result SyncPlan::encapsulate(node g_cut) {
 	for (EncapsulatedBlock& block : block_list) {
 		log.lout(Logger::Level::Medium)
 				<< "Encapsulating Block " << components.fmtBCNode(block.bicon) << std::endl;
-		Logger::Indent _(&log);
+		Logger::Indent __(&log);
 		log.lout(Logger::Level::Minor) << printBijection(block.bij) << std::endl;
 		std::pair<node, node> pair = split(*G, block.bij);
 		block.star_rep = pair.first;

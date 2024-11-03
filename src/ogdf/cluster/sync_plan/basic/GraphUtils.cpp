@@ -1,6 +1,4 @@
 /** \file
- * \brief TODO Document
- *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
@@ -35,11 +33,9 @@
 #include <ogdf/basic/pctree/util/FilteringBFS.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 
+#include <functional>
+
 namespace ogdf {
-
-FilteringBFSIterator FilteringBFS::begin() { return FilteringBFSIterator(this); }
-
-FilteringBFSIterator FilteringBFS::end() { return FilteringBFSIterator(nullptr); }
 
 void moveEnd(Graph& G, edge e, node keep_end, node new_end) {
 	if (e->source() == keep_end) {
@@ -126,6 +122,7 @@ bool joinEdge(Graph& G, adjEntry u_adj, adjEntry v_adj, node u, node v,
 }
 
 void assertStarCentreAndRay(node centre, node ray) {
+#ifdef OGDF_DEBUG
 	bool ray_found = false;
 	for (auto adj : centre->adjEntries) {
 		OGDF_ASSERT(centre->degree() > adj->twinNode()->degree());
@@ -137,6 +134,7 @@ void assertStarCentreAndRay(node centre, node ray) {
 		}
 	}
 	OGDF_ASSERT(!ray || ray_found);
+#endif
 }
 
 node getCentreOfStar(node g_n) {

@@ -33,6 +33,7 @@
 #pragma once
 
 #include <ogdf/cluster/ClusterGraph.h>
+#include <ogdf/cluster/ClusterPlanarityModule.h>
 
 namespace ogdf {
 
@@ -41,7 +42,7 @@ namespace ogdf {
 /**
  * @ingroup ga-cplanarity
  */
-class HananiTutteCPlanarity : public ClusterPlanarityModule {
+class OGDF_EXPORT HananiTutteCPlanarity : public ClusterPlanarityModule {
 	class CLinearSystem;
 	class CGraph;
 
@@ -115,6 +116,7 @@ public:
 
 	Status status() const { return m_status; }
 
+	//! @sa ogdf::sync_plan::preprocessClusterGraph()
 	static void preprocessing(ClusterGraph& C, Graph& G);
 
 	int numNodesPreproc() const { return m_numNodesPreproc; }

@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the SyncPlan::embed operation
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -35,7 +35,6 @@
 #include <ogdf/basic/basic.h>
 #include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/SyncPlan.h>
-#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/SyncPlanConsistency.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>

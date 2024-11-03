@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Utilities for wrapping Iterators as long as we have no std::ranges. TODO should be moved to a central location and discarded once we have C++20.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -37,6 +37,7 @@
 
 namespace ogdf {
 
+//! Simple before-C++20 version for std::ranges::ref_view
 template<typename IT>
 class Range {
 	IT m_begin;
@@ -54,6 +55,7 @@ public:
 	IT end() const { return m_end; }
 };
 
+//! Simple before-C++20 version for std::ranges::zip_view
 template<typename IT1, typename IT2>
 class ZipIterator {
 	IT1 m_iter1;
@@ -102,116 +104,4 @@ public:
 	}
 };
 
-template<typename Wrapped>
-class FilteringIterator {
-	Wrapped m_iter;
-	Wrapped m_end;
-	std::function<bool(Wrapped)> m_filter;
-
-public:
-	// iterator traits
-	using iterator_category = std::input_iterator_tag;
-	using value_type = typename Wrapped::value_type;
-	using difference_type = typename Wrapped::difference_type;
-	using pointer = typename Wrapped::pointer;
-	using reference = typename Wrapped::reference;
-
-	explicit FilteringIterator() = default;
-
-	explicit FilteringIterator(Wrapped mIter, Wrapped mEnd,
-			const std::function<bool(Wrapped)>& mFilter)
-		: m_iter(mIter), m_end(mEnd), m_filter(mFilter) {
-		next(true);
-	}
-
-	bool operator==(const FilteringIterator& rhs) const { return m_iter == rhs.m_iter; }
-
-	bool operator!=(const FilteringIterator& rhs) const { return m_iter != rhs.m_iter; }
-
-	FilteringIterator<Wrapped> begin() const { return *this; }
-
-	FilteringIterator<Wrapped> end() const { return FilteringIterator(m_end, m_end, m_filter); }
-
-	value_type operator*() { return *m_iter; }
-
-	//! Increment operator (prefix, returns result).
-	FilteringIterator<Wrapped>& operator++() {
-		next(false);
-		return *this;
-	}
-
-	//! Increment operator (postfix, returns previous value).
-	FilteringIterator<Wrapped> operator++(int) {
-		FilteringIterator before = *this;
-		next(false);
-		return before;
-	}
-
-	void next(bool before_first) {
-		if (!before_first) {
-			OGDF_ASSERT(m_iter != m_end);
-			++m_iter;
-		}
-		while (m_iter != m_end) {
-			if (m_filter(m_iter)) {
-				break;
-			} else {
-				++m_iter;
-			}
-		}
-	}
-
-	operator bool() const { return valid(); }
-
-	bool valid() const { return m_iter != m_end; }
-};
-
-template<typename Wrapped>
-class BoundsCheckingIterator {
-	Wrapped m_iter;
-	Wrapped m_end;
-
-public:
-	// iterator traits
-	using iterator_category = std::input_iterator_tag;
-	using value_type = typename Wrapped::value_type;
-	using difference_type = typename Wrapped::difference_type;
-	using pointer = typename Wrapped::pointer;
-	using reference = typename Wrapped::reference;
-
-	explicit BoundsCheckingIterator() = default;
-
-	explicit BoundsCheckingIterator(Wrapped mIter, Wrapped mEnd) : m_iter(mIter), m_end(mEnd) { }
-
-	bool operator==(const BoundsCheckingIterator& rhs) const { return m_iter == rhs.m_iter; }
-
-	bool operator!=(const BoundsCheckingIterator& rhs) const { return m_iter != rhs.m_iter; }
-
-	FilteringIterator<Wrapped> begin() const { return *this; }
-
-	FilteringIterator<Wrapped> end() const { return FilteringIterator(m_end, m_end); }
-
-	value_type operator*() { return *m_iter; }
-
-	//! Increment operator (prefix, returns result).
-	FilteringIterator<Wrapped>& operator++() {
-		OGDF_ASSERT(m_iter != m_end);
-		++m_iter;
-		return *this;
-	}
-
-	//! Increment operator (postfix, returns previous value).
-	FilteringIterator<Wrapped> operator++(int) {
-		OGDF_ASSERT(m_iter != m_end);
-		FilteringIterator before = *this;
-		++m_iter;
-		return before;
-	}
-
-	operator bool() const { return valid(); }
-
-	bool valid() const { return m_iter != m_end; }
-};
-
-// TODO add TransformingIterator
 }

@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the SyncPlan::propagate operation and its UndoOperation.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -31,6 +31,7 @@
 #include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphAttributes.h>
 #include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/GraphSets.h>
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/Logger.h>
 #include <ogdf/basic/basic.h>
@@ -352,7 +353,7 @@ SyncPlan::Result SyncPlan::propagatePQ(node u, NodePCRotation* pct, NodePCRotati
 	for (node pcgn : pcg.nodes) {
 		PCNode* pctn = pcg_to_pct[pcgn];
 		if (pctn == nullptr || pctn->getNodeType() != PCNodeType::Leaf) {
-			Logger::Indent _(&log);
+			Logger::Indent __(&log);
 			OGDF_ASSERT(pcgn->degree() > 2);
 			inner_pcg_node = pcgn;
 			components.nodeInserted(pcg_to_u[pcgn], u_bc);

@@ -1,6 +1,4 @@
 /** \file
- * \brief TODO Document
- *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
@@ -35,6 +33,7 @@
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 
+#include <functional>
 #include <utility>
 
 namespace ogdf::sync_plan {
@@ -122,7 +121,8 @@ std::pair<node, node> split(Graph& G, PipeBij& bij, const EdgeArray<edge>* new_e
 }
 
 void join(Graph& G, node u, node v, PipeBij& bij, List<bool>* reverse_v) {
-	join(G, u, v, bij, [&G](node n) { G.delNode(n); }, [&G](edge e) { G.delEdge(e); }, reverse_v);
+	join(
+			G, u, v, bij, [&G](node n) { G.delNode(n); }, [&G](edge e) { G.delEdge(e); }, reverse_v);
 }
 
 void join(Graph& G, node u, node v, PipeBij& bij, const std::function<void(node)>& deleteNode,

@@ -1,7 +1,7 @@
 /** \file
- * \brief TODO Document
+ * \brief Preprocessing functions for handling certain trivially (non)planar ClusterGraph configurations.
  *
- * \author Simon D. Fink <ogdf@niko.fink.bayern>
+ * \author Simon D. Fink <ogdf@niko.fink.bayern>, Carsten Gutwenger
  *
  * \par License:
  * This file is part of the Open Graph Drawing Framework (OGDF).
@@ -40,32 +40,39 @@ class Logger;
 
 namespace ogdf::sync_plan {
 
+//! Preprocessing functions for handling certain trivially (non)planar ClusterGraph configurations.
+/**
+ * The code is taken from HananiTutteCPlanarity::preprocessing (Gutwenger, Mutzel, Schaefer: Practical Experience with Hanani-Tutte for Testing c-Planarity),
+ * but now allows more fine-grained access to the preprocessing functions.
+ */
 namespace preprocess {
 
-extern ogdf::Logger preprocessLog;
+OGDF_EXPORT extern ogdf::Logger preprocessLog;
 
-ogdf::SList<ogdf::node> findSmallNodes(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
+OGDF_EXPORT ogdf::SList<ogdf::node> findSmallNodes(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
 
-ogdf::SList<ogdf::node> findDeg2Nodes(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
+OGDF_EXPORT ogdf::SList<ogdf::node> findDeg2Nodes(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
 
-ogdf::SList<ogdf::cluster> findDisconnectedClusters(const ogdf::ClusterGraph& C,
+OGDF_EXPORT ogdf::SList<ogdf::cluster> findDisconnectedClusters(const ogdf::ClusterGraph& C,
 		const ogdf::Graph& G, ogdf::ClusterArray<ogdf::node>* centre = nullptr);
 
-ogdf::SList<ogdf::cluster> findSmallClusters(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
+OGDF_EXPORT ogdf::SList<ogdf::cluster> findSmallClusters(const ogdf::ClusterGraph& C,
+		const ogdf::Graph& G);
 
-bool removeSmallNodes(const ogdf::ClusterGraph& C, ogdf::Graph& G);
+OGDF_EXPORT bool removeSmallNodes(const ogdf::ClusterGraph& C, ogdf::Graph& G);
 
-bool unsplitDeg2Nodes(const ogdf::ClusterGraph& C, ogdf::Graph& G);
+OGDF_EXPORT bool unsplitDeg2Nodes(const ogdf::ClusterGraph& C, ogdf::Graph& G);
 
-bool disconnectedClustersToStars(ogdf::ClusterGraph& C, ogdf::Graph& G);
+OGDF_EXPORT bool disconnectedClustersToStars(ogdf::ClusterGraph& C, ogdf::Graph& G);
 
-bool removeSmallClusters(ogdf::ClusterGraph& C, ogdf::Graph& G);
+OGDF_EXPORT bool removeSmallClusters(ogdf::ClusterGraph& C, ogdf::Graph& G);
 
 }
 
-//! Preprocessing from HananiTutteCPlanarity::preprocessing (Gutwenger, Mutzel, Schaefer: Practical Experience with Hanani-Tutte for Testing c-Planarity)
-bool preprocessClusterGraph(ogdf::ClusterGraph& C, ogdf::Graph& G);
+//! Preprocess a ClusterGraph to remove trivially c-planar parts or isolate a trivially non-c-planar subgraph.
+OGDF_EXPORT bool preprocessClusterGraph(ogdf::ClusterGraph& C, ogdf::Graph& G);
 
-bool canPreprocessClusterGraph(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
+//! Check whether preprocessing would modify a graph.
+OGDF_EXPORT bool canPreprocessClusterGraph(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
 
 }

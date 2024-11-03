@@ -1,6 +1,4 @@
 /** \file
- * \brief TODO Document
- *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
@@ -34,10 +32,10 @@
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/SList.h>
 #include <ogdf/basic/basic.h>
+#include <ogdf/basic/pctree/util/FilteringBFS.h>
 #include <ogdf/basic/simple_graph_alg.h>
 #include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
-#include <ogdf/basic/pctree/util/FilteringBFS.h>
-#include <ogdf/cluster/sync_plan/operation/Encapsulate.h>
+#include <ogdf/cluster/sync_plan/SyncPlan_operation/Encapsulate.h>
 #include <ogdf/decomposition/BCTree.h>
 
 #include <functional>
@@ -291,7 +289,7 @@ void SyncPlanComponents::cutReplacedByWheel(node centre,
 			}
 			OGDF_ASSERT(bc_edge->source() == centre_bc);
 			bc_size[bc_edge->source()] += bc_size[bc_edge->target()] - 1;
-			node contraced_node = BC.contract(bc_edge);
+			OGDF_IF_DBG(node contraced_node =) BC.contract(bc_edge);
 			OGDF_ASSERT(contraced_node == centre_bc);
 		}
 	}

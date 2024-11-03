@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Consistency checks for debugging the SyncPlan algorithm.
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -37,7 +37,8 @@
 namespace ogdf::sync_plan {
 class SyncPlan;
 
-class SyncPlanConsistency {
+//! Consistency checks for debugging the SyncPlan algorithm.
+class OGDF_EXPORT SyncPlanConsistency {
 	SyncPlan& pq;
 	SyncPlanDrawer draw;
 	int checkCounter = 0;
@@ -47,7 +48,7 @@ public:
 
 	explicit SyncPlanConsistency(SyncPlan& _pq) : pq(_pq), draw(&_pq) {};
 
-	bool consistencyCheck(bool force_check_components=false);
+	bool consistencyCheck(bool force_check_components = false);
 
 	void writeOut(std::string name = "", bool format = true, bool components = true);
 

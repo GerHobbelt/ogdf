@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the embedding of biconnected components via BlockEmbedding
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -32,11 +32,11 @@
 #include <ogdf/basic/GraphList.h>
 #include <ogdf/basic/List.h>
 #include <ogdf/basic/basic.h>
-#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/basic/pctree/util/FilteringBFS.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlan_solve/BlockEmbedding.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 #include <ogdf/cluster/sync_plan/basic/TwoSAT.h>
-#include <ogdf/cluster/sync_plan/solve/BlockEmbedding.h>
 #include <ogdf/decomposition/SPQRTree.h>
 #include <ogdf/decomposition/Skeleton.h>
 #include <ogdf/decomposition/StaticPlanarSPQRTree.h>

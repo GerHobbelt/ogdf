@@ -1,37 +1,41 @@
 /** \file
-* \brief Declaration of randomized clustering generators.
-*
-* \author Carsten Gutwenger, Markus Chimani, Jöran Schierbaum, Simon D. Fink
-*
-* \par License:
-* This file is part of the Open Graph Drawing Framework (OGDF).
-*
-* \par
-* Copyright (C)<br>
-* See README.md in the OGDF root directory for details.
-*
-* \par
-* This program is free software; you can redistribute it and/or
-* modify it under the terms of the GNU General Public License
-* Version 2 or 3 as published by the Free Software Foundation;
-* see the file LICENSE.txt included in the packaging of this file
-* for details.
-*
-* \par
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* \par
-* You should have received a copy of the GNU General Public
-* License along with this program; if not, see
-* http://www.gnu.org/copyleft/gpl.html
-*/
-
-#include <ogdf/basic/Graph_d.h>
+ * \brief Declaration of randomized clustering generators.
+ *
+ * \author Carsten Gutwenger, Markus Chimani, Jöran Schierbaum, Simon D. Fink
+ *
+ * \par License:
+ * This file is part of the Open Graph Drawing Framework (OGDF).
+ *
+ * \par
+ * Copyright (C)<br>
+ * See README.md in the OGDF root directory for details.
+ *
+ * \par
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * Version 2 or 3 as published by the Free Software Foundation;
+ * see the file LICENSE.txt included in the packaging of this file
+ * for details.
+ *
+ * \par
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * \par
+ * You should have received a copy of the GNU General Public
+ * License along with this program; if not, see
+ * http://www.gnu.org/copyleft/gpl.html
+ */
 
 #pragma once
+
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/internal/config.h>
+
+#include <cstdint>
+#include <iosfwd>
 
 namespace ogdf {
 
@@ -119,7 +123,7 @@ struct OGDF_EXPORT RandomClusterConfig {
  * The clustering is c-connected if we only select edges that were already present in \p G instead
  * of being added by the triangulation.
  *
- * @param C is a cluster graph for some \p G.
+ * @param CG is a cluster graph for some \p G.
  * @param config configuration for the random generation
  * @return false if the clustering ran into the configured timeout, true otherwise
  */
@@ -139,7 +143,8 @@ OGDF_EXPORT bool randomPlanarClustering(ClusterGraph& CG, const RandomClusterCon
  * @param node_per_cluster how many nodes each cluster should directly contain.
  * @param edges_per_cluster how many edges to add between each clusters' nodes.
  */
-OGDF_EXPORT void randomClusterPlanarGraph(Graph & G,ClusterGraph& CG, int clusters, int node_per_cluster, int edges_per_cluster);
+OGDF_EXPORT void randomClusterPlanarGraph(Graph& G, ClusterGraph& CG, int clusters,
+		int node_per_cluster, int edges_per_cluster);
 
 //! Create a random SynchronizedPlanarity instance by introducing \p pipe_count pipes between vertices of degree at least \p min_deg.
 OGDF_EXPORT void randomSyncPlanInstance(sync_plan::SyncPlan& pq, int pipe_count, int min_deg = 3);

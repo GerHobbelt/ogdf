@@ -1,5 +1,5 @@
 /** \file
- * \brief TODO Document
+ * \brief Implementation of the SyncPlan::makeReduced operation
  *
  * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
@@ -94,7 +94,8 @@ bool SyncPlan::makeReduced(int check_planarity_every) {
 		undo_stack.pushBack(new ResetIndices(*this));
 	}
 	if (!matchings.getPipeQueue()) {
-		log.lout(Logger::Level::Minor) << "Using default PipeQueueByDegreePreferContract" << std::endl;
+		log.lout(Logger::Level::Minor)
+				<< "Using default PipeQueueByDegreePreferContract" << std::endl;
 		matchings.setPipeQueue(std::make_unique<PipeQueueByDegreePreferContract>(this));
 	}
 	pushUndoOperationAndCheck(new VerifyPipeBijections(*this));
