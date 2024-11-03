@@ -32,20 +32,22 @@
 
 
 #include <ogdf/basic/basic.h>
+#include <ogdf/basic/internal/copy_move.h>
 
-#include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <stdexcept>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <variant>
-#include <vector>
 
-using namespace std; // TODO remove
+namespace ogdf {
 
 template<typename Key2, typename Value, int array_max>
 struct RegisteredMultiArrayEntry {
-	using ValuePairType = pair<Key2, Value>;
-	using ValueArrayType = array<ValuePairType, array_max>;
-	using ValueMapType = unordered_map<Key2, Value>;
+	using ValuePairType = std::pair<Key2, Value>;
+	using ValueArrayType = std::array<ValuePairType, array_max>;
+	using ValueMapType = std::unordered_map<Key2, Value>;
 
 	uint8_t m_size = 0;
 	void* m_value = nullptr;
@@ -80,18 +82,36 @@ struct RegisteredMultiArrayEntry {
 	OGDF_COPY_MOVE_BY_SWAP(RegisteredMultiArrayEntry)
 
 	OGDF_SWAP_OP(RegisteredMultiArrayEntry) {
+		using std::swap;
 		swap(first.m_size, second.m_size);
 		swap(first.m_value, second.m_value);
 	}
-
-	// TODO iterators
-	// TODO get or default
 
 	void unset(const Key2& key) {
 		if (!contains(key)) {
 			return;
 		}
-		get_or_raise(key) = Value(); // TODO actually remove
+		if (m_size <= 0) {
+			ValueMapType& map = getValueMap();
+			int cnt = map.erase(key);
+			OGDF_ASSERT(cnt == 1);
+		} else if (m_size == 1) {
+			delete (ValuePairType*)m_value;
+			m_value = nullptr;
+			m_size = 0;
+		} else {
+			ValueArrayType& array = getValueArray();
+			for (int i = 0; i < m_size; ++i) {
+				if (array[i].first == key) {
+					if (i != m_size - 1) {
+						using std::swap;
+						swap(array[i], array[m_size - 1]);
+					}
+					m_size--;
+					break;
+				}
+			}
+		}
 	}
 
 	Value& get_or_create(const Key2& key, const Value& def = Value()) {
@@ -154,12 +174,12 @@ struct RegisteredMultiArrayEntry {
 
 	Value& get_or_raise(const Key2& key) const {
 		if (m_value == nullptr) {
-			throw out_of_range("no keys stored");
+			throw std::out_of_range("no keys stored");
 		} else if (m_size <= 0) {
 			ValueMapType& map = getValueMap();
 			auto it = map.find(key);
 			if (it == map.end()) {
-				throw out_of_range("key not in map");
+				throw std::out_of_range("key not in map");
 			}
 			return it->second;
 		} else if (m_size == 1) {
@@ -167,7 +187,7 @@ struct RegisteredMultiArrayEntry {
 			if (pair.first == key) {
 				return pair.second;
 			} else {
-				throw out_of_range("key not in scalar");
+				throw std::out_of_range("key not in scalar");
 			}
 		} else {
 			ValueArrayType& array = getValueArray();
@@ -176,7 +196,7 @@ struct RegisteredMultiArrayEntry {
 					return array[i].second;
 				}
 			}
-			throw out_of_range("key not in array");
+			throw std::out_of_range("key not in array");
 		}
 	}
 
@@ -256,3 +276,5 @@ public:
 
 	bool has(const Key1& k1) { return !array[k1].empty(k1); }
 };
+
+}

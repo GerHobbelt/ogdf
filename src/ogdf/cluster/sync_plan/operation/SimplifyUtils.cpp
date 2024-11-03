@@ -28,10 +28,25 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/GraphSets.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/basic/pctree/NodePCRotation.h>
 #include <ogdf/basic/pctree/PCNode.h>
+#include <ogdf/basic/pctree/util/IntrusiveList.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/operation/Simplify.h>
 
-using pc_tree::PCNode;
+#include <functional>
+#include <ostream>
+
+using ogdf::pc_tree::PCNode;
+
+namespace ogdf::sync_plan::internal {
 
 SimplifyMapping::SimplifyMapping(adjEntry u2Adj, adjEntry uAdj, adjEntry vAdj, adjEntry v2Adj)
 	: u2_adj(u2Adj), u_adj(uAdj), v2_adj(v2Adj) {
@@ -217,12 +232,13 @@ void validatePartnerPCTree(const NodePCRotation* u_pc, const NodePCRotation* v_p
 		}
 	} else {
 		OGDF_ASSERT(u_pc->getNode()->degree() < v_pc->getNode()->degree());
-		// TODO more checks here
+		// room for improvement: we could validate the incident edge for leaf mapping here,
+		// but that is tedious and always worked alright up to now
 	}
 }
 
 bool validateCollectedAdjs(node v, node u, List<SimplifyMapping>& bij_list, EdgeSet<>& visited,
-		PQPlanarityComponents& components) {
+		SyncPlanComponents& components) {
 	int collected_v_adjs = 0;
 	for (auto& entry : bij_list) {
 		for (adjEntry adj : entry.v_adj) {
@@ -260,3 +276,5 @@ bool validateCollectedAdjs(node v, node u, List<SimplifyMapping>& bij_list, Edge
 }
 
 #endif // OGDF_DEBUG
+
+}

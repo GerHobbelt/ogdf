@@ -31,13 +31,16 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
-#include <ogdf/cluster/sync_plan/PQPlanarityComponents.h>
+#include <ogdf/basic/List.h>
 #include <ogdf/cluster/sync_plan/basic/RegisteredMultiArray.h>
 #include <ogdf/cluster/sync_plan/basic/TwoSAT.h>
 #include <ogdf/decomposition/StaticPlanarSPQRTree.h>
 
-using namespace ogdf;
+namespace ogdf::sync_plan {
 
+class SyncPlanComponents;
+
+namespace internal {
 struct BlockEmbedding;
 
 template<typename V>
@@ -59,8 +62,11 @@ struct BlockEmbedding {
 
 	virtual ~BlockEmbedding() { delete spqr; }
 
-	void init(Graph& G, PQPlanarityComponents& components, node bc, EdgeArray<edge>& Ge_to_subgraph,
+	void init(Graph& G, SyncPlanComponents& components, node bc, EdgeArray<edge>& Ge_to_subgraph,
 			EdgeArray<BlockEmbedding*>& Ge_to_block);
 
 	bool addQVertex(node q, EdgeArray<edge>& Ge_to_subgraph, TwoSAT& sat, twosat_var part_var);
 };
+
+}
+}

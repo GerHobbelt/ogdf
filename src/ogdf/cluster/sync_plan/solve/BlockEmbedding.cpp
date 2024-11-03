@@ -28,16 +28,30 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/basic/GraphIterators.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/cluster/sync_plan/basic/TwoSAT.h>
 #include <ogdf/cluster/sync_plan/solve/BlockEmbedding.h>
+#include <ogdf/decomposition/SPQRTree.h>
+#include <ogdf/decomposition/Skeleton.h>
+#include <ogdf/decomposition/StaticPlanarSPQRTree.h>
 
-void BlockEmbedding::init(Graph& G, PQPlanarityComponents& components, node bc,
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+
+void BlockEmbedding::init(Graph& G, SyncPlanComponents& components, node bc,
 		EdgeArray<edge>& Ge_to_subgraph, EdgeArray<BlockEmbedding*>& Ge_to_block) {
 	OGDF_ASSERT(!components.isCutComponent(bc));
 	subgraph_to_Ge.init(subgraph, nullptr);
 
-	for (node w : components.nodesInBiconnectedComponent(
-				 bc)) { // TODO reuse the NodeArray<bool> visited from the BFS?
+	for (node w : components.nodesInBiconnectedComponent(bc)) {
 		OGDF_ASSERT(w != nullptr);
 		OGDF_ASSERT(w->graphOf() == &G);
 		node n = subgraph.newNode();
@@ -86,14 +100,14 @@ bool BlockEmbedding::addQVertex(node q, EdgeArray<edge>& Ge_to_subgraph, TwoSAT&
 	const Skeleton* rigid_skel = nullptr;
 	node q_in_rigid = nullptr;
 
-	int cnt_s = 0, cnt_r = 0, cnt_p = 0;
+	// int cnt_s = 0, cnt_r = 0, cnt_p = 0;
 	node subgr_q = Gn_to_subgraph(q, this);
 	for (adjEntry adj : q->adjEntries) {
 		const Skeleton& skel = spqr->skeletonOfReal(Ge_to_subgraph[adj->theEdge()]);
 		edge skel_edge = spqr->copyOfReal(Ge_to_subgraph[adj->theEdge()]);
 		OGDF_ASSERT(skel_edge->graphOf() == &skel.getGraph());
 		if (spqr->typeOf(skel.treeNode()) == SPQRTree::NodeType::SNode) {
-			cnt_s++;
+			// cnt_s++;
 		} else if (rigid == nullptr) {
 			rigid = skel.treeNode();
 			rigid_skel = &skel;
@@ -105,10 +119,10 @@ bool BlockEmbedding::addQVertex(node q, EdgeArray<edge>& Ge_to_subgraph, TwoSAT&
 			OGDF_ASSERT(skel.original(q_in_rigid) == subgr_q);
 			if (spqr->typeOf(rigid) == SPQRTree::NodeType::PNode) {
 				OGDF_ASSERT(spqr->skeleton(rigid).getGraph().firstNode()->degree() == 3);
-				cnt_p++;
+				// cnt_p++;
 			} else {
 				OGDF_ASSERT(spqr->typeOf(rigid) == SPQRTree::NodeType::RNode);
-				cnt_r++;
+				// cnt_r++;
 			}
 			OGDF_ASSERT(spqr->numberOfNodeEmbeddings(rigid) == 2);
 		} else {
@@ -158,4 +172,6 @@ bool BlockEmbedding::addQVertex(node q, EdgeArray<edge>& Ge_to_subgraph, TwoSAT&
 		return false;
 	}
 	return true;
+}
+
 }

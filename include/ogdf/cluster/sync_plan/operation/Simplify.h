@@ -31,8 +31,28 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
-#include <ogdf/basic/pctree/NodePCRotation.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+
+#include <functional>
+#include <iosfwd>
+
+namespace ogdf::pc_tree {
+class NodePCRotation;
+} // namespace ogdf::pc_tree
+
+namespace ogdf {
+template<bool>
+class EdgeSet;
+} // namespace ogdf
+
+namespace ogdf::sync_plan {
+
+class SyncPlanComponents;
+
+namespace internal {
 
 struct SimplifyMapping {
 	adjEntry u2_adj, u_adj, v2_adj;
@@ -53,14 +73,14 @@ struct FrozenSimplifyMapping {
 	friend std::ostream& operator<<(std::ostream& os, const FrozenSimplifyMapping& mapping);
 };
 
-class UndoSimplify : public PQPlanarity::UndoOperation {
+class UndoSimplify : public SyncPlan::UndoOperation {
 	int u2_idx, u_idx, v_idx, v2_idx;
 	SList<FrozenSimplifyMapping> bij;
 
 public:
 	UndoSimplify(const List<SimplifyMapping>& in_bij, node u2, node u, node v, node v2 = nullptr);
 
-	void undo(PQPlanarity& pq) override;
+	void undo(SyncPlan& pq) override;
 
 	std::ostream& print(std::ostream& os) const override;
 };
@@ -120,6 +140,9 @@ void validatePartnerPCTree(const NodePCRotation* u_pc, const NodePCRotation* v_p
  * Check that /p bij_list contains all adjEntries of \p v which belong to a parallel bundle leading to \p u.
  */
 bool validateCollectedAdjs(node v, node u, List<SimplifyMapping>& bij_list, EdgeSet<>& visited,
-		PQPlanarityComponents& components);
+		SyncPlanComponents& components);
 
 #endif
+
+}
+}

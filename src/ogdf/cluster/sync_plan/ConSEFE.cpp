@@ -28,13 +28,21 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/basic/Graph_d.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
-#include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 
+#include <cstdint>
 #include <stdexcept>
 
-PQPlanarity::PQPlanarity(const Graph* sefe, Graph* work, EdgeArray<uint8_t>& edge_types)
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+
+SyncPlan::SyncPlan(const Graph* sefe, Graph* work, EdgeArray<uint8_t>& edge_types)
 	: G(work)
 	, matchings(G)
 	, partitions(G)
@@ -95,4 +103,6 @@ PQPlanarity::PQPlanarity(const Graph* sefe, Graph* work, EdgeArray<uint8_t>& edg
 	initComponents();
 	matchings.rebuildHeap();
 	// pushUndoOperationAndCheck(op);
+}
+
 }

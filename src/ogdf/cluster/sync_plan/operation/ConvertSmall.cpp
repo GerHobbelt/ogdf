@@ -28,11 +28,26 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/QPartitioning.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
-class UndoConvertSmall : public PQPlanarity::UndoOperation {
+#include <ostream>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
+
+class UndoConvertSmall : public SyncPlan::UndoOperation {
 public:
 	int small_idx, twin_idx;
 	int small_first_adj_idx, twin_last_adj_idx;
@@ -52,7 +67,7 @@ public:
 #endif
 	}
 
-	void undo(PQPlanarity& pq) override {
+	void undo(SyncPlan& pq) override {
 		// SYNCPLAN_PROFILE_START("undo-convertSmall")
 		node small = pq.nodeFromIndex(small_idx);
 		node twin = pq.nodeFromIndex(twin_idx);
@@ -84,9 +99,9 @@ public:
 	}
 };
 
-PQPlanarity::Result PQPlanarity::convertSmall(node small) {
+SyncPlan::Result SyncPlan::convertSmall(node small) {
 	if (small->degree() > 4 || partitions.isQVertex(small)) {
-		return PQPlanarity::Result::NOT_APPLICABLE;
+		return SyncPlan::Result::NOT_APPLICABLE;
 	} else if (matchings.isMatchedPVertex(small)) {
 		// SYNCPLAN_PROFILE_START("convertSmall")
 		log.lout(Logger::Level::High) << "CONVERT SMALL degree " << small->degree() << std::endl;
@@ -110,5 +125,7 @@ PQPlanarity::Result PQPlanarity::convertSmall(node small) {
 		// SYNCPLAN_PROFILE_STOP("convertSmall")
 	}
 	formatNode(small);
-	return PQPlanarity::Result::SUCCESS;
+	return SyncPlan::Result::SUCCESS;
+}
+
 }

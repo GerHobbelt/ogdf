@@ -30,18 +30,17 @@
  */
 #pragma once
 
-#include <ogdf/basic/AdjEntryArray.h>
-#include <ogdf/basic/EdgeArray.h>
-#include <ogdf/basic/GraphObserver.h>
-#include <ogdf/basic/NodeArray.h>
-#include <ogdf/cluster/sync_plan/basic/Iterators.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
 
+#include <functional>
 #include <memory>
 #include <ostream>
+#include <utility>
 
-class PMatching;
-
+namespace ogdf::sync_plan {
 enum class PipeType { BlockBlock, BlockCut, CutCut };
 
 struct Pipe {
@@ -82,7 +81,7 @@ struct PipeQueue {
 };
 
 class PMatching : protected GraphObserver {
-	friend class PQPlanarityConsistency;
+	friend class SyncPlanConsistency;
 
 private:
 	int priority_pipes = 0;
@@ -164,3 +163,4 @@ protected:
 		nodes.fill(nullptr);
 	};
 };
+}

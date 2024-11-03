@@ -28,16 +28,38 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Array.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/basic/comparer.h>
 #include <ogdf/basic/simple_graph_alg.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
-#include <ogdf/cluster/sync_plan/PQPlanarityConsistency.h>
-#include <ogdf/cluster/sync_plan/PQPlanarityOptions.h>
-#include <ogdf/cluster/sync_plan/PipeOrder.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/QPartitioning.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlanConsistency.h>
+#include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
+#include <ogdf/decomposition/BCTree.h>
 #include <ogdf/fileformats/GraphIO.h>
 
-bool PQPlanarityConsistency::doWriteOut = false;
+#include <fstream>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
+
+bool SyncPlanConsistency::doWriteOut = false;
 
 void normalize(List<adjEntry>& adjs) {
 	adjEntry min_adj = adjs.front();
@@ -51,7 +73,7 @@ void normalize(List<adjEntry>& adjs) {
 	}
 }
 
-void PQPlanarityConsistency::writeOut(std::string name, bool format, bool components) {
+void SyncPlanConsistency::writeOut(std::string name, bool format, bool components) {
 	if (name.empty()) {
 		std::stringstream ss;
 		ss << "consistencyCheck" << checkCounter;
@@ -93,7 +115,7 @@ void PQPlanarityConsistency::writeOut(std::string name, bool format, bool compon
 		ss << name << ".json";
 		std::ofstream os(ss.str());
 		nlohmann::json json;
-		PQPlanOptions::generateConfigJSON(pq, json);
+		SyncPlanOptions::generateConfigJSON(pq, json);
 		os << json.dump(4) << std::endl;
 	}
 #endif
@@ -179,7 +201,7 @@ void PQPlanarityConsistency::writeOut(std::string name, bool format, bool compon
 	pq.log.lout(Logger::Level::High) << ">>>>> Wrote " << name << "(Tree).gml/svg <<<<<" << std::endl;
 }
 
-bool PQPlanarityConsistency::consistencyCheck() {
+bool SyncPlanConsistency::consistencyCheck() {
 	if (doWriteOut) {
 		writeOut();
 	}
@@ -199,7 +221,7 @@ bool PQPlanarityConsistency::consistencyCheck() {
 	for (node n : pq.G->nodes) {
 		node_reg[n] = n;
 		OGDF_ASSERT(!(pq.matchings.isMatchedPVertex(n) && pq.partitions.isQVertex(n)));
-		//        OGDF_ASSERT(!(pq.partitions.isQVertex(n) && pq.components.isCutVertex(n))); //  && n->degree() > 3 // TODO reeanble
+		OGDF_ASSERT(!(pq.partitions.isQVertex(n) && pq.components.isCutVertex(n) && n->degree() > 3));
 		if (pq.partitions.isQVertex(n)) {
 			q_count++;
 		}
@@ -244,7 +266,7 @@ bool PQPlanarityConsistency::consistencyCheck() {
 		for (node u : pq.partitions.nodesInPartition(part)) {
 			OGDF_ASSERT(node_reg[u] == u);
 			OGDF_ASSERT(pq.partitions.getPartitionOf(u) == part);
-			//            OGDF_ASSERT(!pq.components.isCutVertex(u)); // TODO reeanble
+			OGDF_ASSERT(!pq.components.isCutVertex(u) || u->degree() <= 3);
 			q_count++;
 		}
 	}
@@ -279,7 +301,7 @@ bool PQPlanarityConsistency::consistencyCheck() {
 	return true;
 }
 
-void PQPlanarityConsistency::checkComponentRegeneration() {
+void SyncPlanConsistency::checkComponentRegeneration() {
 	BCTree ref_bc(*pq.G, true);
 	NodeArray<int> ref_conn(ref_bc.bcTree(), 0);
 	int ref_conn_count = connectedComponents(ref_bc.bcTree(), ref_conn);
@@ -351,4 +373,6 @@ void PQPlanarityConsistency::checkComponentRegeneration() {
 		}
 	}
 	OGDF_ASSERT(ref_conn_count + isolated_count == pq.components.connectedCount());
+}
+
 }

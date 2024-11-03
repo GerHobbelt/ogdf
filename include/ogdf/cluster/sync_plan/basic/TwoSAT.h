@@ -31,9 +31,16 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/basic/simple_graph_alg.h>
 
-using namespace ogdf;
+#include <utility>
+#include <vector>
+
+#pragma GCC diagnostic ignored "-Wshadow" // TODO remove
+
+namespace ogdf {
 
 #ifdef OGDF_DEBUG
 
@@ -62,7 +69,7 @@ const twosat_var TwoSAT_Var_Undefined = -1;
 #endif
 
 class TwoSAT : protected Graph {
-	ArrayBuffer<bool> assignment;
+	std::vector<bool> assignment;
 	std::vector<node> node_map;
 
 public:
@@ -72,7 +79,7 @@ public:
 		node pos = newNode(), neg = newNode();
 		OGDF_ASSERT(pos->index() % 2 == 0);
 		OGDF_ASSERT(pos->index() + 1 == neg->index());
-		assignment.push(false);
+		assignment.push_back(false);
 		OGDF_ASSERT(node_map.size() == pos->index());
 		node_map.push_back(pos);
 		OGDF_ASSERT(node_map.size() == neg->index());
@@ -128,8 +135,8 @@ public:
 		assignment.clear();
 	}
 
-	using const_iterator = typename ArrayBuffer<bool>::const_iterator;
-	using const_reverse_iterator = typename ArrayBuffer<bool>::const_reverse_iterator;
+	using const_iterator = typename std::vector<bool>::const_iterator;
+	using const_reverse_iterator = typename std::vector<bool>::const_reverse_iterator;
 
 	const_iterator begin() const { return assignment.begin(); }
 
@@ -169,3 +176,5 @@ protected:
 		return idx;
 	}
 };
+
+}

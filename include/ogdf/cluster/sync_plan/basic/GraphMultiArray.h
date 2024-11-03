@@ -1,8 +1,7 @@
 /** \file
- * \brief Declaration of ClusterPlanarModule which implements a c-planarity
- *        test.
+ * \brief TODO Document
  *
- * \author Karsten Klein
+ * \author Simon D. Fink <ogdf@niko.fink.bayern>
  *
  * \par License:
  * This file is part of the Open Graph Drawing Framework (OGDF).
@@ -29,28 +28,27 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-
 #pragma once
 
-#include <ogdf/basic/Module.h>
-#include <ogdf/cluster/ClusterGraph.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/cluster/sync_plan/basic/RegisteredMultiArray.h>
 
 namespace ogdf {
 
-class OGDF_EXPORT ClusterPlanarModule : public Module {
-public:
-	ClusterPlanarModule() { }
+namespace internal {
+template<typename T>
+using NA = NodeArray<T, true>;
+template<typename T>
+using EA = EdgeArray<T, true>;
+template<typename T>
+using AEA = AdjEntryArray<T, true>;
+}
 
-	virtual ~ClusterPlanarModule() { }
-
-	//! Returns true, if CG is c-planar, false otherwise.
-	virtual bool isClusterPlanar(const ClusterGraph& CG) { return doTest(CG); }
-
-protected:
-	//! Performs a c-planarity test on CG.
-	virtual bool doTest(const ClusterGraph& CG) = 0;
-
-	OGDF_MALLOC_NEW_DELETE
-};
+template<typename Key2, typename Value>
+using NodeMultiArray = RegisteredMultiArray<node, Key2, Value, internal::NA>;
+template<typename Key2, typename Value>
+using EdgeMultiArray = RegisteredMultiArray<edge, Key2, Value, internal::EA>;
+template<typename Key2, typename Value>
+using AdjEntryMultiArray = RegisteredMultiArray<adjEntry, Key2, Value, internal::AEA>;
 
 }

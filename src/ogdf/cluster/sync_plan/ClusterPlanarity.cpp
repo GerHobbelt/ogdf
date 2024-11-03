@@ -28,11 +28,44 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/basic/simple_graph_alg.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/ClusterGraph.h>
+#include <ogdf/cluster/ClusterGraphAttributes.h>
+#include <ogdf/cluster/sync_plan/ClusterPlanarity.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
-#include <ogdf/cluster/sync_plan/utils/Clusters.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
+
+#include <sstream>
+#include <string>
+
+using namespace ogdf::sync_plan::internal;
+
+bool ogdf::SyncPlanClusterPlanarityModule::isClusterPlanarDestructive(ClusterGraph& CG, Graph& G) {
+	sync_plan::SyncPlan SP(&G, &CG);
+	return SP.makeReduced() && SP.solveReduced();
+}
+
+bool ogdf::SyncPlanClusterPlanarityModule::clusterPlanarEmbedClusterPlanarGraph(ClusterGraph& CG,
+		Graph& G) {
+	sync_plan::SyncPlan SP(&G, &CG);
+	if (SP.makeReduced() && SP.solveReduced()) {
+		SP.embed();
+		return true;
+	} else {
+		return false;
+	}
+}
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
 
 struct FrozenCluster {
 	int index = -1, parent = -1, parent_node = -1;
@@ -41,7 +74,7 @@ struct FrozenCluster {
 	FrozenCluster(int index, int parent) : index(index), parent(parent) { }
 };
 
-class UndoInitCluster : public PQPlanarity::UndoOperation {
+class UndoInitCluster : public SyncPlan::UndoOperation {
 public:
 	ClusterGraph* cg;
 	List<FrozenCluster> clusters;
@@ -56,7 +89,7 @@ public:
 		}
 	}
 
-	void processCluster(PQPlanarity& pq, cluster c, int parent_node) {
+	void processCluster(SyncPlan& pq, cluster c, int parent_node) {
 		node n = pq.nodeFromIndex(parent_node);
 		node t = pq.matchings.getTwin(n);
 		pq.log.lout(Logger::Level::Medium)
@@ -78,7 +111,7 @@ public:
 		}
 	}
 
-	void undo(PQPlanarity& pq) override {
+	void undo(SyncPlan& pq) override {
 		OGDF_ASSERT(cg->numberOfClusters() == 1);
 		cg->rootCluster()->adjEntries.clear();
 		ClusterArray<cluster> cluster_index(*cg, nullptr);
@@ -119,7 +152,7 @@ public:
 	std::ostream& print(std::ostream& os) const override { return os << "UndoInitCluster"; }
 };
 
-PQPlanarity::PQPlanarity(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
+SyncPlan::SyncPlan(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga)
 	: G(g)
 	, matchings(G)
 	, partitions(G)
@@ -220,4 +253,28 @@ PQPlanarity::PQPlanarity(Graph* g, ClusterGraph* cg, ClusterGraphAttributes* cga
 	initComponents();
 	matchings.rebuildHeap();
 	pushUndoOperationAndCheck(op);
+}
+
+void reduceLevelToCluster(const Graph& LG, const std::vector<std::vector<node>>& emb, Graph& G,
+		ClusterGraph& CG) {
+	NodeArray<std::pair<node, node>> map(LG);
+	cluster p = CG.rootCluster();
+	for (int l = emb.size() - 1; l >= 0; --l) {
+		cluster c = CG.newCluster(p);
+		for (int i = 0; i < emb[l].size(); ++i) {
+			node n = emb[l][i];
+			node u = G.newNode();
+			node v = G.newNode();
+			CG.reassignNode(u, c);
+			CG.reassignNode(v, p);
+			map[n] = {u, v};
+			G.newEdge(u, v);
+		}
+		p = c;
+	}
+	for (edge e : LG.edges) {
+		G.newEdge(map[e->source()].second, map[e->target()].first);
+	}
+}
+
 }

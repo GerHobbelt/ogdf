@@ -28,7 +28,12 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/cluster/sync_plan/basic/OverlappingGraphCopies.h>
+
+namespace ogdf {
 
 const Graph& OverlappingGraphCopy::original() const { return *m_pOGC->G; }
 
@@ -102,4 +107,6 @@ void OverlappingGraphCopy::unmap() {
 			m_pOGC->node_copies.remove(original(n), this);
 		}
 	}
+}
+
 }

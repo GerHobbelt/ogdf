@@ -33,12 +33,28 @@
 #include <ogdf/basic/Graph.h>
 #include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/cluster/sync_plan/utils/Bijection.h>
-#include <ogdf/decomposition/BCTree.h>
 
+#include <functional>
+#include <iterator>
 #include <ostream>
+#include <string>
+#include <utility>
 
+
+#define OGDF_CONTAINER_PRINTER(NAME)                                                     \
+	template<typename Container>                                                         \
+	struct NAME {                                                                        \
+		const Container& container;                                                      \
+		explicit NAME(const Container& container) : container(container) { }             \
+		template<typename ContainerT>                                                    \
+		friend std::ostream& operator<<(std::ostream& os, const NAME<ContainerT>& inst); \
+	}
+
+namespace ogdf::sync_plan {
+namespace internal {
 std::string to_string(const std::function<std::ostream&(std::ostream&)>& func);
 
+// will only be found when `using internal`, so no namespace pollution
 std::ostream& operator<<(std::ostream& os, const std::function<std::ostream&(std::ostream&)>& func);
 
 template<typename T1, typename T2>
@@ -49,19 +65,7 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& pair) {
 std::ostream& operator<<(std::ostream& os, const ogdf::Graph& G);
 
 std::ostream& operator<<(std::ostream& os, const ogdf::ClusterGraph& CG);
-
-std::ostream& operator<<(std::ostream& os, const ogdf::BCTree::BNodeType& obj);
-
-std::ostream& operator<<(std::ostream& os, const ogdf::BCTree::GNodeType& obj);
-
-#define OGDF_CONTAINER_PRINTER(NAME)                                                     \
-	template<typename Container>                                                         \
-	struct NAME {                                                                        \
-		const Container& container;                                                      \
-		explicit NAME(const Container& container) : container(container) { }             \
-		template<typename ContainerT>                                                    \
-		friend std::ostream& operator<<(std::ostream& os, const NAME<ContainerT>& inst); \
-	}
+}
 
 OGDF_CONTAINER_PRINTER(printIncidentEdges);
 
@@ -90,7 +94,7 @@ std::ostream& operator<<(std::ostream& os, const printEdges<Container>& inst) {
 		   << (adj->isSource() ? "->" : "<-") << "n" << adj->twinNode()->index() << "), ";
 	}
 	return os;
-};
+}
 
 template<>
 std::ostream& operator<<(std::ostream& os, const printEdges<PipeBij>& inst);
@@ -121,7 +125,7 @@ std::ostream& operator<<(std::ostream& os, const printBijection<Container>& inst
 		os << ")";
 	}
 	return os;
-};
+}
 
 template<typename Container>
 std::ostream& operator<<(std::ostream& os, const printFrozenBijection<Container>& inst) {
@@ -131,4 +135,6 @@ std::ostream& operator<<(std::ostream& os, const printFrozenBijection<Container>
 		first = false;
 	}
 	return os;
-};
+}
+
+}

@@ -28,10 +28,28 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
-#include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/basic/GraphIterators.h>
 #include <ogdf/cluster/sync_plan/operation/Encapsulate.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
+
+#include <sstream>
+#include <string>
+#include <utility>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
 
 std::ostream& operator<<(std::ostream& os, const EncapsulatedBlock& block) {
 	os << "EncapsulatedBlock(bicon=" << block.bicon << ", bicon_rep=" << block.bicon_rep
@@ -39,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, const EncapsulatedBlock& block) {
 	return os;
 }
 
-class UndoEncapsulate : public PQPlanarity::UndoOperation {
+class UndoEncapsulate : public SyncPlan::UndoOperation {
 public:
 	List<std::pair<int, int>> ray_pipes;
 
@@ -49,7 +67,7 @@ public:
 		}
 	}
 
-	void undo(PQPlanarity& pq) override {
+	void undo(SyncPlan& pq) override {
 		// SYNCPLAN_PROFILE_START("undo-encapsulate")
 		pq.log.lout(Logger::Level::High)
 				<< "UNDO ENCAPSULATE CUT for " << ray_pipes.size() << " blocks." << std::endl;
@@ -85,10 +103,10 @@ public:
 	}
 };
 
-PQPlanarity::Result PQPlanarity::encapsulate(node g_cut) {
+SyncPlan::Result SyncPlan::encapsulate(node g_cut) {
 	// get some properties of the original cut vertex
 	if (!components.isCutVertex(g_cut)) {
-		return PQPlanarity::Result::NOT_APPLICABLE;
+		return SyncPlan::Result::NOT_APPLICABLE;
 	}
 	// SYNCPLAN_PROFILE_START("encapsulate")
 	node bc_cut = components.biconnectedComponent(g_cut);
@@ -169,5 +187,7 @@ PQPlanarity::Result PQPlanarity::encapsulate(node g_cut) {
 
 	pushUndoOperationAndCheck(new UndoEncapsulate(block_list));
 	// SYNCPLAN_PROFILE_STOP("encapsulate")
-	return PQPlanarity::Result::SUCCESS;
+	return SyncPlan::Result::SUCCESS;
+}
+
 }

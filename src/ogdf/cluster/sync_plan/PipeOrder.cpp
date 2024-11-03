@@ -28,8 +28,14 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/PipeOrder.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
 
 bool PipeQueueByDegreePreferContract::comparePipes(const Pipe* x, const Pipe* y) const {
 	if (x->heap_data != y->heap_data) {
@@ -52,4 +58,6 @@ bool PipeQueueByDegreePreferContract::isQueue1(Pipe* p) const {
 		ret = !ret;
 	}
 	return ret;
+}
+
 }

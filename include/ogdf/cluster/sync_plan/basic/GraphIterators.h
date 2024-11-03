@@ -31,11 +31,19 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
 #include <ogdf/basic/Queue.h>
+#include <ogdf/basic/basic.h>
+
+#include <functional>
+#include <initializer_list>
+#include <iterator>
 
 #pragma GCC diagnostic ignored "-Wshadow" // TODO remove
 
-using namespace ogdf;
+namespace ogdf {
+
+class FilteringBFSIterator;
 
 class FilteringBFS {
 	Queue<node> m_pending;
@@ -69,6 +77,10 @@ public:
 			std::function<bool(adjEntry)> visit = return_true<adjEntry>,
 			std::function<bool(node)> descend_from = return_true<node>)
 		: m_pending(nodes), m_visited(G, false), m_visit(visit), m_descend(descend_from) { }
+
+	FilteringBFSIterator begin();
+
+	FilteringBFSIterator end();
 
 	void next() {
 		OGDF_ASSERT(!m_pending.empty());
@@ -157,6 +169,4 @@ public:
 	}
 };
 
-FilteringBFSIterator begin(FilteringBFS& bfs);
-
-FilteringBFSIterator end(FilteringBFS& bfs);
+}

@@ -28,11 +28,29 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/basic/extended_graph_alg.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/QPartitioning.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlanConsistency.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
 #include <ogdf/cluster/sync_plan/basic/TwoSAT.h>
 #include <ogdf/cluster/sync_plan/solve/BlockEmbedding.h>
+#include <ogdf/decomposition/Skeleton.h>
+#include <ogdf/decomposition/StaticPlanarSPQRTree.h>
+
+#include <memory>
+#include <ostream>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
 
 #ifdef SYNCPLAN_OPSTATS
 #	define SYNCPLAN_OPSTATS_STEP(op, meta)                                                        \
@@ -44,13 +62,14 @@
 #	define SYNCPLAN_OPSTATS_STEP(op, meta)
 #endif
 
-bool PQPlanarity::solveReduced(bool fail_fast) {
+bool SyncPlan::solveReduced(bool fail_fast) {
 	// SYNCPLAN_PROFILE_START("solveReduced")
 #ifdef SYNCPLAN_OPSTATS
 	std::chrono::time_point<std::chrono::high_resolution_clock> start = tpc::now();
 #endif
 	OGDF_ASSERT(matchings.isReduced());
-	// ensure that all Q-node are surrounded by wheels // TODO makeWheel could also be replaced by a Q-vertex-aware embedding tree generator
+	// ensure that all Q-node are surrounded by wheels
+	// room for improvement: makeWheel could also be replaced by a Q-vertex-aware embedding tree generator
 #ifdef SYNCPLAN_OPSTATS
 	int wheels = 0;
 #endif
@@ -190,4 +209,6 @@ bool PQPlanarity::solveReduced(bool fail_fast) {
 	// SYNCPLAN_PROFILE_STOP("solveReduced")
 
 	return true;
+}
+
 }

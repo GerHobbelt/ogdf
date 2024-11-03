@@ -28,46 +28,33 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/basic/Graph.h>
+#pragma once
 
-using namespace ogdf;
+#include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
 
-class DFS {
-	Graph G;
+#include <string>
 
-	NodeArray<int> discovery;
-	NodeArray<int> finish;
-	NodeArray<node> predecessor;
+#pragma GCC diagnostic ignored "-Wshadow" // TODO remove
 
-	int time = 0;
+namespace ogdf::sync_plan {
+class SyncPlan;
+
+class SyncPlanConsistency {
+	SyncPlan& pq;
+	SyncPlanDrawer draw;
+	int checkCounter = 0;
 
 public:
-	explicit DFS(const Graph& g)
-		: G(g), discovery(G, -1), finish(G, -1), predecessor(G, nullptr) { }
+	static bool doWriteOut;
 
-	void dfs_visit(node u) {
-		time += 1;
-		discovery[u] = time;
+	explicit SyncPlanConsistency(SyncPlan& pq) : pq(pq), draw(&pq) {};
 
-		for (adjEntry adj : u->adjEntries) {
-			node v = adj->twinNode();
-			if (adj->isSource() && discovery[v] < 0) {
-				predecessor[v] = u;
-				dfs_visit(v);
-			}
-		}
+	bool consistencyCheck();
 
-		time += 1;
-		finish[u] = time;
-	}
+	void writeOut(std::string name = "", bool format = true, bool components = true);
 
-	void dfs() {
-		for (node n : G.nodes) {
-			if (discovery[n] < 0) {
-				dfs_visit(n);
-			}
-		}
-	}
+	void checkComponentRegeneration();
+
+	int getCheckCounter() const { return checkCounter; }
 };
-
-int main() { }
+}

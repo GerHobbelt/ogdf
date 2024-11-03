@@ -31,19 +31,34 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
-#include <ogdf/basic/NodeSet.h>
+#include <ogdf/basic/GraphSets.h>
 #include <ogdf/cluster/sync_plan/basic/GraphIterators.h>
-#include <ogdf/cluster/sync_plan/operation/Encapsulate.h>
 #include <ogdf/decomposition/BCTree.h>
 
-using namespace ogdf;
+#include <functional>
+#include <iosfwd>
+#include <utility>
 
-class PQPlanarityComponents {
-	friend class PQPlanarity;
+namespace ogdf {
+template<class E>
+class List;
+template<class E>
+class SList;
+template<class E>
+class SListPure;
+} // namespace ogdf
 
-	friend class PQPlanarityConsistency;
+namespace ogdf::sync_plan {
+namespace internal {
+struct EncapsulatedBlock;
+}
 
-	friend class PQPlanarityDrawer;
+class SyncPlanComponents {
+	friend class SyncPlan;
+
+	friend class SyncPlanConsistency;
+
+	friend class SyncPlanDrawer;
 
 private:
 	Graph* G;
@@ -60,7 +75,7 @@ private:
 	mutable NodeArray<std::pair<int, edge>> marker; // used by graphEdgeToBCEdge
 
 public:
-	explicit PQPlanarityComponents(Graph* g) : G(g), BC(), marker(BC, std::pair(0, nullptr)) {
+	explicit SyncPlanComponents(Graph* g) : G(g), BC(), marker(BC, std::pair(0, nullptr)) {
 		reset();
 	}
 
@@ -132,22 +147,23 @@ private:
 
 	void preJoin(node keep, node merge);
 
-	void postSplitOffEncapsulatedBlock(node cut, EncapsulatedBlock& block);
+	void postSplitOffEncapsulatedBlock(node cut, internal::EncapsulatedBlock& block);
 
 	void labelIsolatedNodes();
 };
 
 class BiconnectedIsolation {
-	PQPlanarityComponents& m_comps;
+	SyncPlanComponents& m_comps;
 	node m_bicon;
 	NodeSet<true> m_to_restore;
-	NodeArray<SListPure<adjEntry>> m_adjEntries; // TODO replace by contiguous vector + indices?
+	NodeArray<SListPure<adjEntry>> m_adjEntries; // room for improvement: replace by contiguous vector + indices
 	Graph::HiddenEdgeSet m_hiddenEdges;
 
 public:
-	explicit BiconnectedIsolation(PQPlanarityComponents& comps, node bicon);
+	explicit BiconnectedIsolation(SyncPlanComponents& comps, node bicon);
 
 	~BiconnectedIsolation() { restore(); }
 
 	void restore(bool restore_embedding = true);
 };
+}

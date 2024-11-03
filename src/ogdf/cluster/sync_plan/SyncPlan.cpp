@@ -28,15 +28,40 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/basic/Graph_d.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/basic/graphics.h>
+#include <ogdf/basic/pctree/PCEnum.h>
+#include <ogdf/basic/pctree/PCNode.h>
+#include <ogdf/basic/pctree/PCTree.h>
+#include <ogdf/basic/pctree/PCTreeIterators.h>
 #include <ogdf/basic/simple_graph_alg.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/QPartitioning.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
+#include <ogdf/decomposition/BCTree.h>
 
+#include <array>
+#include <cstdlib>
+#include <functional>
+#include <ostream>
 #include <stdexcept>
+#include <string>
+#include <tuple>
+#include <typeinfo>
 
 #include <cxxabi.h>
 
-PQPlanarity::PQPlanarity(Graph* g, GraphAttributes* ga)
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+
+SyncPlan::SyncPlan(Graph* g, GraphAttributes* ga)
 	: G(g)
 	, matchings(G)
 	, partitions(G)
@@ -50,7 +75,7 @@ PQPlanarity::PQPlanarity(Graph* g, GraphAttributes* ga)
 	initComponents();
 }
 
-void PQPlanarity::initComponents() {
+void SyncPlan::initComponents() {
 	OGDF_ASSERT(isLoopFree(*G));
 	BCTree bc(*G, true);
 	components.reset();
@@ -60,11 +85,11 @@ void PQPlanarity::initComponents() {
 	}
 }
 
-void PQPlanarity::formatNode(node n) const {
+void SyncPlan::formatNode(node n) const {
 	if (GA == nullptr) {
 		return;
 	}
-	::formatNode(n, GA, components.biconnectedId(n));
+	ogdf::sync_plan::formatNode(n, GA, components.biconnectedId(n));
 	if (matchings.isMatchedPVertex(n)) {
 		GA->width(n) = 10;
 		GA->height(n) = 10;
@@ -77,7 +102,7 @@ void PQPlanarity::formatNode(node n) const {
 	}
 }
 
-PipeType PQPlanarity::getPipeType(const Pipe* p) {
+PipeType SyncPlan::getPipeType(const Pipe* p) {
 	OGDF_ASSERT(p != nullptr);
 	if (components.isCutVertex(p->node1)) {
 		if (components.isCutVertex(p->node2)) {
@@ -129,7 +154,7 @@ int sumPNodeDegrees(const pc_tree::PCTree& pct) {
 
 #ifdef SYNCPLAN_OPSTATS
 
-void PQPlanarity::printOPStatsStart(const Pipe* p, Operation op, const NodePCRotation* pct) {
+void SyncPlan::printOPStatsStart(const Pipe* p, Operation op, const NodePCRotation* pct) {
 	if (!stats_first_in_array) {
 		stats_out << ",";
 	} else {
@@ -158,7 +183,7 @@ void PQPlanarity::printOPStatsStart(const Pipe* p, Operation op, const NodePCRot
 	}
 }
 
-void PQPlanarity::printOPStatsEnd(bool success, int64_t time_ns) {
+void SyncPlan::printOPStatsEnd(bool success, int64_t time_ns) {
 	if (!success) {
 		stats_out << "\"suc\":false,";
 	}
@@ -167,7 +192,7 @@ void PQPlanarity::printOPStatsEnd(bool success, int64_t time_ns) {
 
 #endif
 
-bool PQPlanarity::canContract(const Pipe* p) {
+bool SyncPlan::canContract(const Pipe* p) {
 	if (p == nullptr) {
 		return false;
 	}
@@ -185,7 +210,42 @@ bool PQPlanarity::canContract(const Pipe* p) {
 	}
 }
 
-PQPlanarity::VerifyPipeBijections::VerifyPipeBijections(PQPlanarity& pq) {
+std::ostream& operator<<(std::ostream& os, const SyncPlan& pq) {
+	return os << "SyncPlan Instance with " << pq.G->numberOfNodes() << " nodes, "
+			  << pq.G->numberOfEdges() << " edges, " << pq.matchings.getPipeCount() << " pipes, "
+			  << pq.partitions.qVertexCount() << " Q-Vertices in " << pq.partitions.partitionCount()
+			  << " partitions and " << pq.components.connectedCount() << " connected components";
+}
+
+std::ostream& operator<<(std::ostream& os, const SyncPlan::UndoOperation& undo_op) {
+	return undo_op.print(os);
+}
+
+std::function<std::ostream&(std::ostream&)> SyncPlan::fmtPQNode(node n, bool include_comp) const {
+	OGDF_ASSERT(n == nullptr || n->graphOf() == G);
+	return [n, include_comp, this](std::ostream& ss) -> std::ostream& {
+		if (n != nullptr) {
+			ss << "["
+			   << (matchings.isMatchedPVertex(n) ? "mP" : (partitions.isQVertex(n) ? "Q" : "uP"));
+			if (include_comp) {
+				ss << (components.isCutVertex(n) ? "C" : "B");
+			}
+			ss << " #" << n->index() << " °" << n->degree();
+			if (include_comp) {
+				ss << " @" << components.biconnectedId(n) << "/" << components.connectedId(n);
+			}
+			if (GA != nullptr) {
+				ss << " \"" << GA->label(n) << "\"";
+			}
+			ss << "]";
+		} else {
+			ss << "[NULL]";
+		}
+		return ss;
+	};
+}
+
+SyncPlan::VerifyPipeBijections::VerifyPipeBijections(SyncPlan& pq) {
 	for (const Pipe& pipe : pq.matchings) {
 		std::tuple<int, int, FrozenPipeBij>& tuple = *pipes.emplaceBack();
 		std::get<0>(tuple) = pipe.node1->index();
@@ -196,7 +256,7 @@ PQPlanarity::VerifyPipeBijections::VerifyPipeBijections(PQPlanarity& pq) {
 	}
 }
 
-void PQPlanarity::VerifyPipeBijections::undo(PQPlanarity& pq) {
+void SyncPlan::VerifyPipeBijections::undo(SyncPlan& pq) {
 	if (pq.matchings.getPipeCount() != pipes.size()) {
 		throw std::runtime_error("number of pipes changed!");
 	}
@@ -212,11 +272,11 @@ void PQPlanarity::VerifyPipeBijections::undo(PQPlanarity& pq) {
 	}
 }
 
-std::ostream& PQPlanarity::VerifyPipeBijections::print(std::ostream& os) const {
+std::ostream& SyncPlan::VerifyPipeBijections::print(std::ostream& os) const {
 	return os << "VerifyPipeBijections";
 }
 
-PQPlanarity::ResetIndices::ResetIndices(PQPlanarity& pq)
+SyncPlan::ResetIndices::ResetIndices(SyncPlan& pq)
 	: max_node(pq.G->maxNodeIndex())
 	, max_edge(pq.G->maxEdgeIndex())
 	, count_node(pq.G->numberOfNodes())
@@ -225,7 +285,7 @@ PQPlanarity::ResetIndices::ResetIndices(PQPlanarity& pq)
 	pq.indices_saved = true;
 }
 
-void PQPlanarity::ResetIndices::undo(PQPlanarity& pq) {
+void SyncPlan::ResetIndices::undo(SyncPlan& pq) {
 	if (count_node != pq.G->numberOfNodes()) {
 		throw std::runtime_error("number of nodes changed!");
 	}
@@ -237,12 +297,12 @@ void PQPlanarity::ResetIndices::undo(PQPlanarity& pq) {
 	pq.indices_saved = false;
 }
 
-std::ostream& PQPlanarity::ResetIndices::print(std::ostream& os) const {
+std::ostream& SyncPlan::ResetIndices::print(std::ostream& os) const {
 	return os << "ResetIndices(max_node " << max_node << ", max_edge " << max_edge
 			  << ", count_node " << count_node << ", count_edge " << count_edge << ")";
 }
 
-std::string PQPlanarity::UndoOperation::name() const {
+std::string SyncPlan::UndoOperation::name() const {
 	int status = 0;
 	char* ret = abi::__cxa_demangle(typeid(*this).name(), nullptr, nullptr, &status);
 	if (status != 0) {
@@ -252,4 +312,6 @@ std::string PQPlanarity::UndoOperation::name() const {
 	free(ret);
 	OGDF_ASSERT(!str.empty());
 	return str;
+}
+
 }

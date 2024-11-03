@@ -28,12 +28,36 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/GraphSets.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/basic/pctree/NodePCRotation.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/basic/GraphUtils.h>
+#include <ogdf/cluster/sync_plan/basic/Iterators.h>
 #include <ogdf/cluster/sync_plan/operation/Simplify.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
-using namespace pc_tree;
+#include <algorithm>
+#include <functional>
+#include <ostream>
+
+namespace ogdf::pc_tree {
+class PCNode;
+} // namespace ogdf::pc_tree
+
+using namespace ogdf::pc_tree;
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
 
 UndoSimplify::UndoSimplify(const List<SimplifyMapping>& in_bij, node u2, node u, node v, node v2)
 	: u2_idx(u2->index())
@@ -53,7 +77,7 @@ UndoSimplify::UndoSimplify(const List<SimplifyMapping>& in_bij, node u2, node u,
 	}
 }
 
-void UndoSimplify::undo(PQPlanarity& pq) {
+void UndoSimplify::undo(SyncPlan& pq) {
 	// SYNCPLAN_PROFILE_START("undo-simplify")
 	node u2 = pq.nodeFromIndex(u2_idx), u = pq.nodeFromIndex(u_idx), v = pq.nodeFromIndex(v_idx),
 		 v2 = nullptr;
@@ -97,8 +121,7 @@ void UndoSimplify::undo(PQPlanarity& pq) {
 			v_order.pushBack(entry->v_adj.front());
 		} else {
 			List<adjEntry> v_sub_order;
-			for (auto it = v->adjEntries.rbegin(); it != v->adjEntries.rend();
-					it++) { // FIXME can we directly start at the right adj?
+			for (auto it = v->adjEntries.rbegin(); it != v->adjEntries.rend(); it++) {
 				adjEntry adj = *it;
 				if (bij_map[adj] == entry) {
 					v_sub_order.pushFront(adj);
@@ -166,7 +189,7 @@ void UndoSimplify::undo(PQPlanarity& pq) {
 	// SYNCPLAN_PROFILE_STOP("undo-simplify")
 }
 
-class UndoSimplifyToroidal : public PQPlanarity::UndoOperation {
+class UndoSimplifyToroidal : public SyncPlan::UndoOperation {
 	int u_idx, v_idx, u_first_adj_idx, v_last_adj_idx;
 #ifdef OGDF_DEBUG
 	FrozenPipeBij bij;
@@ -183,7 +206,7 @@ public:
 #endif
 	}
 
-	void undo(PQPlanarity& pq) override {
+	void undo(SyncPlan& pq) override {
 		node u = pq.nodeFromIndex(u_idx);
 		node v = pq.nodeFromIndex(v_idx);
 		edge ue = pq.edgeFromIndex(u_first_adj_idx);
@@ -203,11 +226,11 @@ public:
 	}
 };
 
-PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
+SyncPlan::Result SyncPlan::simplify(node u, const NodePCRotation* pc) {
 	OGDF_ASSERT(matchings.isMatchedPVertex(u));
 	OGDF_ASSERT(!components.isCutVertex(u));
 	if (!pc->isTrivial()) {
-		return PQPlanarity::Result::NOT_APPLICABLE;
+		return SyncPlan::Result::NOT_APPLICABLE;
 	}
 	OGDF_ASSERT(pc->getNode() == u);
 	node v = pc->getTrivialPartnerPole();
@@ -251,7 +274,7 @@ PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
 #ifdef SYNCPLAN_OPSTATS
 			printOPStatsEnd(false, 0);
 #endif
-			return PQPlanarity::Result::NOT_APPLICABLE;
+			return SyncPlan::Result::NOT_APPLICABLE;
 		}
 		if (degree_mismatch) {
 			log.lout()
@@ -263,7 +286,7 @@ PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
 #ifdef SYNCPLAN_OPSTATS
 			printOPStatsEnd(false, 0);
 #endif
-			return PQPlanarity::Result::NOT_APPLICABLE;
+			return SyncPlan::Result::NOT_APPLICABLE;
 		}
 	}
 
@@ -301,7 +324,7 @@ PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
 			const List<edge>& found = pc->getPartnerEdgesForLeaf(leaf_for_u_inc_edge[pair.second]);
 			for (edge e : found) {
 				OGDF_ASSERT(!visited.isMember(e));
-				visited.insert(e); // TODO only used in debug mode
+				visited.insert(e);
 				entry->v_adj.pushBack(e->getAdj(v));
 			}
 			OGDF_ASSERT(compareWithExhaustiveNodeDFS(*G, pair.second, v, visited, entry->v_adj));
@@ -345,7 +368,7 @@ PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
 #ifdef SYNCPLAN_OPSTATS
 				printOPStatsEnd(false, dur_ns(tpc::now() - start));
 #endif
-				return PQPlanarity::Result::INVALID_INSTANCE;
+				return SyncPlan::Result::INVALID_INSTANCE;
 			}
 		}
 
@@ -388,5 +411,7 @@ PQPlanarity::Result PQPlanarity::simplify(node u, const NodePCRotation* pc) {
 	printOPStatsEnd(true, dur_ns(tpc::now() - start));
 #endif
 	// SYNCPLAN_PROFILE_STOP("simplify")
-	return PQPlanarity::Result::SUCCESS;
+	return SyncPlan::Result::SUCCESS;
+}
+
 }

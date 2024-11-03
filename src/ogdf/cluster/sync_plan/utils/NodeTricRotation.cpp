@@ -28,30 +28,37 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
-#include <ogdf/cluster/sync_plan/utils/Logging.h>
+#include <ogdf/basic/Array.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/basic/extended_graph_alg.h>
+#include <ogdf/basic/pctree/PCEnum.h>
+#include <ogdf/basic/pctree/PCNode.h>
+#include <ogdf/basic/pctree/PCRegistry.h>
+#include <ogdf/basic/pctree/util/IntrusiveList.h>
+#include <ogdf/basic/simple_graph_alg.h>
+#include <ogdf/cluster/sync_plan/basic/OverlappingGraphCopies.h>
 #include <ogdf/cluster/sync_plan/utils/NodeTricRotation.h>
+#include <ogdf/graphalg/Triconnectivity.h>
 
-using namespace pc_tree;
-using namespace spqr_utils;
+#include <ostream>
+#include <utility>
+#include <vector>
+
+
+using namespace ogdf::pc_tree;
+using namespace ogdf::sync_plan::spqr_utils;
+
+namespace ogdf::sync_plan {
 
 Logger SimpleSPQRTree::log;
 
 #define logm log.lout(Logger::Level::Medium)
 #define logd log.lout(Logger::Level::Minor)
-
-std::ostream& operator<<(std::ostream& os, Triconnectivity::CompType t) {
-	switch (t) {
-	case ogdf::Triconnectivity::CompType::triconnected:
-		return os << "R";
-	case ogdf::Triconnectivity::CompType::polygon:
-		return os << "S";
-	case ogdf::Triconnectivity::CompType::bond:
-		return os << "P";
-	default:
-		return os << "?";
-	}
-}
 
 void SimpleSPQRTree::init() {
 	if (!skel_array.empty()) {
@@ -232,6 +239,7 @@ NodeSSPQRRotation::NodeSSPQRRotation(const SimpleSPQRTree& spqr, node n) : spqr(
 		PCNode* n1 = process(skel_n->firstAdj(), *skel, nullptr);
 		PCNode* n2 = process(skel_n->lastAdj(), *skel, nullptr);
 		if (n1->isLeaf()) {
+			using std::swap;
 			swap(n1, n2);
 		}
 		logm << "Degree-2 S-Node Shortcut with Nodes " << n1 << " and " << n2 << "!" << std::endl;
@@ -436,4 +444,6 @@ void NodeSSPQRRotation::getIncidentRealEdgesInSubtree(adjEntry skel_adj, Overlap
 			}
 		}
 	}
+}
+
 }

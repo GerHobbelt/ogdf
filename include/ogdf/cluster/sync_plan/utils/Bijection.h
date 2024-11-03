@@ -31,16 +31,21 @@
 #pragma once
 
 #include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/comparer.h>
 #include <ogdf/cluster/sync_plan/basic/Iterators.h>
 
-using namespace ogdf;
+#include <utility>
 
-using PipeBijIterator = ZipIterator<internal::GraphObjectContainer<AdjElement>::iterator,
-		internal::GraphObjectContainer<AdjElement>::reverse_iterator>;
+namespace ogdf::sync_plan {
+
+using PipeBijIterator = ZipIterator<ogdf::internal::GraphObjectContainer<AdjElement>::iterator,
+		ogdf::internal::GraphObjectContainer<AdjElement>::reverse_iterator>;
 using PipeBijRange = Range<PipeBijIterator>;
 using PipeBijPair = std::pair<adjEntry, adjEntry>;
 using FrozenPipeBijPair = std::pair<int, int>;
-using PipeBij = List<PipeBijPair>; // TODO convert to vector?
+using PipeBij = List<PipeBijPair>;
 using FrozenPipeBij = List<FrozenPipeBijPair>;
 
 OGDF_DECLARE_COMPARER(PipeBijCmp, PipeBijPair, int, x.first->theEdge()->index());
@@ -58,3 +63,11 @@ void getPipeBijection(node u, node v, EdgeArray<edge>& out);
 void getFrozenPipeBijection(node u, node v, FrozenPipeBij& out);
 
 void freezePipeBijection(const PipeBij& in, FrozenPipeBij& out);
+
+std::pair<node, node> split(Graph& G, sync_plan::PipeBij& bij,
+		const EdgeArray<int>* split_idcs = nullptr, const EdgeArray<bool>* split_reverse = nullptr,
+		int src_idx = -1, int tgt_idx = -1);
+
+void join(Graph& G, node u, node v, sync_plan::PipeBij& bij, List<bool>* reverse_v = nullptr);
+
+}

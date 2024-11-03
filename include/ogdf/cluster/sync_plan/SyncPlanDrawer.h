@@ -30,13 +30,27 @@
  */
 #pragma once
 
+#include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphCopy.h>
 #include <ogdf/basic/LayoutModule.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/fileformats/GraphIO.h>
 
+#include <array>
+#include <functional>
 #include <memory>
+#include <utility>
 
-using namespace ogdf;
+namespace ogdf {
+class Color;
+} // namespace ogdf
+
+namespace ogdf::sync_plan {
+class SyncPlan;
+
+// TODO move to central location / internal namespace?
 
 extern const std::array<Color, 63> colors;
 
@@ -59,14 +73,12 @@ void fixParallels(Graph& G, const std::function<void(edge, edge)>& cb);
 
 void bendEdge(GraphAttributes& GA, edge e, double bend);
 
-class PQPlanarity;
-
-class PQPlanarityDrawer {
+class SyncPlanDrawer {
 	std::unique_ptr<LayoutModule> planar_layout;
 	std::unique_ptr<LayoutModule> non_planar_layout;
 	GraphIO::SVGSettings svg;
 
-	PQPlanarity* PQ;
+	SyncPlan* PQ;
 	GraphAttributes BC_GA;
 	List<edge> g_edges;
 	List<edge> bc_edges;
@@ -75,9 +87,9 @@ class PQPlanarityDrawer {
 	std::unique_ptr<GraphAttributes> own_GA;
 
 public:
-	PQPlanarityDrawer(PQPlanarity* pq);
+	SyncPlanDrawer(SyncPlan* pq);
 
-	virtual ~PQPlanarityDrawer() { cleanUp(); }
+	virtual ~SyncPlanDrawer() { cleanUp(); }
 
 	GraphAttributes& ensureGraphAttributes();
 
@@ -89,3 +101,4 @@ public:
 
 	void cleanUp();
 };
+}

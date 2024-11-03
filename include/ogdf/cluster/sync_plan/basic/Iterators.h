@@ -30,9 +30,14 @@
  */
 #pragma once
 
+#include <functional>
+#include <iosfwd>
+#include <iterator>
 #include <utility>
 
 #pragma GCC diagnostic ignored "-Wshadow" // TODO remove
+
+namespace ogdf {
 
 template<typename IT>
 class Range {
@@ -211,3 +216,4 @@ public:
 };
 
 // TODO add TransformingIterator
+}

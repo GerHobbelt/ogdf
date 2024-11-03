@@ -29,20 +29,42 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <ogdf/basic/Graph.h>
 #include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphCopy.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/LayoutModule.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
 #include <ogdf/basic/PreprocessorLayout.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/basic/extended_graph_alg.h>
+#include <ogdf/basic/geometry.h>
+#include <ogdf/basic/graphics.h>
 #include <ogdf/basic/simple_graph_alg.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
-#include <ogdf/cluster/sync_plan/PQPlanarityAttributes.h>
-#include <ogdf/cluster/sync_plan/utils/Clusters.h>
+#include <ogdf/cluster/ClusterGraph.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlanDrawer.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 #include <ogdf/layered/OptimalHierarchyLayout.h>
 #include <ogdf/layered/SugiyamaLayout.h>
 #include <ogdf/packing/ComponentSplitterLayout.h>
 #include <ogdf/planarlayout/FPPLayout.h>
 
+#include <algorithm>
+#include <array>
+#include <functional>
 #include <memory>
+#include <sstream>
+#include <string>
+#include <utility>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
 
 const std::array<Color, 63> colors = {Color("#00FF00"), Color("#0000FF"), Color("#FF0000"),
 		Color("#01FFFE"), Color("#FFA6FE"), Color("#FFDB66"), Color("#006401"), Color("#010067"),
@@ -83,13 +105,6 @@ void styleClusterBorder(const ClusterGraph& CG,
 		}
 		node src = translate(e)->source();
 		node tgt = translate(e)->target();
-		// TODO can't we guarantee a consistent orientation?
-		//        if (G.searchEdge(subdivisions[e].front().first->theNode(), src)) {
-		//            OGDF_ASSERT(G.searchEdge(subdivisions[e].back().first->theNode(), tgt));
-		//        } else {
-		//            OGDF_ASSERT(G.searchEdge(subdivisions[e].front().first->theNode(), tgt));
-		//            OGDF_ASSERT(G.searchEdge(subdivisions[e].back().first->theNode(), src));
-		//        }
 		int i = 1, m = subdivisions[e].size() + 1;
 		double dx = (GA.x(tgt) - GA.x(src)) / m, dy = (GA.y(tgt) - GA.y(src)) / m;
 		for (std::pair<adjEntry, cluster> subdiv : subdivisions[e]) {
@@ -189,7 +204,7 @@ std::unique_ptr<std::pair<GraphCopy, GraphAttributes>> drawClusterGraph(ClusterG
 
 	EdgeArray<List<std::pair<adjEntry, cluster>>> subdivisions(CG.constGraph());
 	std::function<edge(edge)> translate = [&GC](edge e) -> edge { return GC.copy(e); };
-	clusterBorderToEdges(CG, GC, &subdivisions, translate);
+	planarizeClusterBorderCrossings(CG, GC, &subdivisions, translate);
 	styleClusterBorder(CG, subdivisions, GCA, translate);
 	auto formatSplitEdge = [&GCA](edge e, edge e2) {
 		GCA.width(e2->source()) = GCA.width(e2->target());
@@ -212,7 +227,7 @@ std::unique_ptr<std::pair<GraphCopy, GraphAttributes>> drawClusterGraph(ClusterG
 	return pair;
 }
 
-PQPlanarityDrawer::PQPlanarityDrawer(PQPlanarity* pq) : PQ(pq) {
+SyncPlanDrawer::SyncPlanDrawer(SyncPlan* pq) : PQ(pq) {
 	auto* pre = new PreprocessorLayout();
 	planar_layout.reset(pre);
 	pre->setRandomizePositions(false);
@@ -236,7 +251,7 @@ PQPlanarityDrawer::PQPlanarityDrawer(PQPlanarity* pq) : PQ(pq) {
 	svg.curviness(0.3);
 }
 
-void PQPlanarityDrawer::layout(bool format, bool components) {
+void SyncPlanDrawer::layout(bool format, bool components) {
 	if (PQ->GA != nullptr) {
 		if (isPlanar(*PQ->G)) {
 			planar_layout->call(*PQ->GA);
@@ -257,8 +272,8 @@ void PQPlanarityDrawer::layout(bool format, bool components) {
 		BC_GA.init(PQ->components.bcTree(), GraphAttributes::all);
 		planar_layout->call(BC_GA);
 		for (node bc : PQ->components.bcTree().nodes) {
-			BC_GA.label(bc) = to_string(PQ->components.fmtBCNode(bc));
-			::formatNode(bc, &BC_GA, bc->index());
+			BC_GA.label(bc) = internal::to_string(PQ->components.fmtBCNode(bc));
+			formatNode(bc, &BC_GA, bc->index());
 			if (PQ->components.isCutComponent(bc)) {
 				BC_GA.shape(bc) = Shape::Ellipse;
 			} else {
@@ -300,7 +315,7 @@ void PQPlanarityDrawer::layout(bool format, bool components) {
 	}
 }
 
-void PQPlanarityDrawer::cleanUp() {
+void SyncPlanDrawer::cleanUp() {
 	for (edge e : g_edges) {
 		reuse_g_edge_idx.pushBack(e->index());
 		PQ->G->delEdge(e);
@@ -314,10 +329,12 @@ void PQPlanarityDrawer::cleanUp() {
 	BC_GA.init(0);
 }
 
-GraphAttributes& PQPlanarityDrawer::ensureGraphAttributes() {
+GraphAttributes& SyncPlanDrawer::ensureGraphAttributes() {
 	if (PQ->GA == nullptr) {
 		own_GA = std::make_unique<GraphAttributes>(*(PQ->G), GraphAttributes::all);
 		PQ->GA = own_GA.get();
 	}
 	return *PQ->GA;
+}
+
 }

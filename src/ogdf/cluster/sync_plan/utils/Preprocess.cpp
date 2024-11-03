@@ -28,10 +28,21 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/ClusterArray.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/ClusterGraph.h>
 #include <ogdf/cluster/sync_plan/utils/Preprocess.h>
 
+#include <ostream>
+#include <utility>
+
 using namespace ogdf;
+
+namespace ogdf::sync_plan::preprocess {
 
 ogdf::Logger preprocessLog;
 
@@ -246,4 +257,6 @@ bool removeSmallClusters(ClusterGraph& C, Graph& G) {
 		C.delCluster(c);
 	}
 	return !toRemove.empty();
+}
+
 }

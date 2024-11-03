@@ -30,29 +30,19 @@
  */
 #pragma once
 
-#include <ogdf/basic/EdgeArray.h>
-#include <ogdf/basic/Graph_d.h>
-#include <ogdf/basic/NodeArray.h>
-#include <ogdf/cluster/sync_plan/basic/RegisteredMultiArray.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/Observer.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/basic/GraphMultiArray.h>
 
 #pragma GCC diagnostic ignored "-Wshadow" // TODO remove
 
-using namespace ogdf;
-
-
-template<typename T>
-using NA = NodeArray<T, true>;
-template<typename T>
-using EA = EdgeArray<T, true>;
-
-template<typename Key2, typename Value>
-using NodeMultiArray = RegisteredMultiArray<node, Key2, Value, NA>;
-template<typename Key2, typename Value>
-using EdgeMultiArray = RegisteredMultiArray<edge, Key2, Value, EA>;
+namespace ogdf {
 
 class OverlappingGraphCopies;
 
-class OverlappingGraphCopy : public Graph { // TODO common interface with GraphCopyBase
+// room for improvement: common interface with GraphCopyBase, add auto-linking ::insert method
+class OverlappingGraphCopy : public Graph {
 	friend class OverlappingGraphCopies;
 
 	OverlappingGraphCopies* m_pOGC; //!< The master instance.
@@ -221,3 +211,5 @@ public:
 
 	OGDF_NO_MOVE(OverlappingGraphCopies)
 };
+
+}

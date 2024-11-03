@@ -28,10 +28,19 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
+#include <ogdf/cluster/sync_plan/utils/Bijection.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
-using namespace ogdf;
+#include <functional>
+#include <memory>
+#include <ostream>
+
+namespace ogdf::sync_plan {
 
 Pipe::Pipe(node node1, node node2)
 	: node1(node1)
@@ -100,11 +109,11 @@ const Pipe& PMatching::getTopPipe() const {
 	return *(queue->getTop());
 }
 
-void PMatching::matchNodes(node f, node s) { // TODO don't match deg-1 nodes
+void PMatching::matchNodes(node f, node s) { // room for improvement: don't match deg-1 nodes
 	OGDF_ASSERT(!isMatchedPVertex(f));
 	OGDF_ASSERT(!isMatchedPVertex(s));
 	OGDF_ASSERT(f->degree() == s->degree());
-	// OGDF_ASSERT(f->degree() > 3); // TODO this is violated by the RemCut before and Contract Rays after Propagate
+	// OGDF_ASSERT(f->degree() > 3); // this is violated by the RemCut before and Contract Rays after Propagate
 	List<Pipe>::iterator it = pipes_list.emplaceBack(f, s);
 	(*it).list_entry = it;
 	if (queue) {
@@ -199,6 +208,9 @@ std::function<std::ostream&(std::ostream&)> PMatching::printBijection(node u) co
 	node v = getTwin(u);
 	const auto bij = getIncidentEdgeBijection(u);
 	return [u, v, bij](std::ostream& ss) -> std::ostream& {
-		return ss << "u" << u->index() << " = v" << v->index() << ": " << ::printBijection(bij);
+		return ss << "u" << u->index() << " = v" << v->index() << ": "
+				  << sync_plan::printBijection(bij);
 	};
+}
+
 }

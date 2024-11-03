@@ -28,23 +28,39 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/GraphAttributes.h>
+#include <ogdf/basic/GraphList.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/SList.h>
+#include <ogdf/basic/basic.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
-class UndoMakeWheel : public PQPlanarity::UndoOperation {
+#include <sstream>
+#include <string>
+
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
+
+class UndoMakeWheel : public SyncPlan::UndoOperation {
 public:
 	int centre_idx;
 
 	UndoMakeWheel(node centre) : centre_idx(centre->index()) { }
 
-	void undo(PQPlanarity& pq) override { pq.contractWheel(pq.nodeFromIndex(centre_idx)); }
+	void undo(SyncPlan& pq) override { pq.contractWheel(pq.nodeFromIndex(centre_idx)); }
 
 	std::ostream& print(std::ostream& os) const override {
 		return os << "UndoMakeWheel(" << centre_idx << ")";
 	}
 };
 
-void PQPlanarity::makeWheel(node centre, bool update_cuts) {
+void SyncPlan::makeWheel(node centre, bool update_cuts) {
 	// SYNCPLAN_PROFILE_START("makeWheel")
 	bool is_cut = update_cuts && components.isCutVertex(centre);
 	log.lout(Logger::Level::High) << "MAKE WHEEL centre " << fmtPQNode(centre) << " (update cut "
@@ -109,14 +125,15 @@ void PQPlanarity::makeWheel(node centre, bool update_cuts) {
 	log.lout(Logger::Level::Medium) << printIncidentEdges(centre->adjEntries) << std::endl;
 
 	if (is_cut) {
-		components.cutReplacedByWheel(centre, block_neigh); // TODO use union-find to merge blocks faster
+		components.cutReplacedByWheel(centre,
+				block_neigh); // room for improvement: use union-find to merge blocks faster
 	}
 
 	pushUndoOperation(new UndoMakeWheel(centre));
 	// SYNCPLAN_PROFILE_STOP("makeWheel")
 }
 
-void PQPlanarity::contractWheel(node centre) {
+void SyncPlan::contractWheel(node centre) {
 	// SYNCPLAN_PROFILE_START("contractWheel")
 	OGDF_ASSERT(is_wheel[centre]);
 	log.lout(Logger::Level::High)
@@ -136,4 +153,6 @@ void PQPlanarity::contractWheel(node centre) {
 	is_wheel[centre] = false;
 	log.lout(Logger::Level::Medium) << printIncidentEdges(centre->adjEntries) << std::endl;
 	// SYNCPLAN_PROFILE_STOP("contractWheel")
+}
+
 }

@@ -28,13 +28,32 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/List.h>
+#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/basic/extended_graph_alg.h>
 #include <ogdf/basic/pctree/NodePCRotation.h>
-#include <ogdf/cluster/sync_plan/PQPlanarity.h>
+#include <ogdf/basic/pctree/PCEnum.h>
+#include <ogdf/cluster/sync_plan/PMatching.h>
 #include <ogdf/cluster/sync_plan/PipeOrder.h>
+#include <ogdf/cluster/sync_plan/SyncPlan.h>
+#include <ogdf/cluster/sync_plan/SyncPlanComponents.h>
+#include <ogdf/cluster/sync_plan/SyncPlanConsistency.h>
 #include <ogdf/cluster/sync_plan/utils/Logging.h>
 
-PQPlanarity::Result PQPlanarity::checkPCTree(node u) {
+#include <cmath>
+#include <cstddef>
+#include <memory>
+#include <ostream>
+
+using namespace ogdf::pc_tree;
+using namespace ogdf::sync_plan::internal;
+
+namespace ogdf::sync_plan {
+using internal::operator<<;
+
+SyncPlan::Result SyncPlan::checkPCTree(node u) {
 	try {
 #ifdef SYNCPLAN_OPSTATS
 		tp pc_start = tpc::now();
@@ -42,7 +61,7 @@ PQPlanarity::Result PQPlanarity::checkPCTree(node u) {
 		// SYNCPLAN_PROFILE_START("checkPCTree")
 		BiconnectedIsolation iso(components, components.biconnectedComponent(u));
 		NodePCRotation pc(*G, u, true);
-		iso.restore(); // TODO Make function of components to get EmbeddingTree interface
+		iso.restore(); // room for improvement: make function of components to get EmbeddingTree
 		log.lout() << "PC-Tree with " << pc.getPNodeCount() << " P-nodes and " << pc.getCNodeCount()
 				   << " C-nodes" << std::endl;
 		if (log.is_lout(ogdf::Logger::Level::Minor)) {
@@ -65,11 +84,11 @@ PQPlanarity::Result PQPlanarity::checkPCTree(node u) {
 		log.lout(Logger::Level::Alarm)
 				<< "Instance became non-planar during reduction, so creating a PC-Tree failed!"
 				<< std::endl;
-		return PQPlanarity::Result::INVALID_INSTANCE;
+		return SyncPlan::Result::INVALID_INSTANCE;
 	}
 }
 
-bool PQPlanarity::makeReduced(int check_planarity_every) {
+bool SyncPlan::makeReduced(int check_planarity_every) {
 	// SYNCPLAN_PROFILE_START("makeReduced")
 	if (!indices_saved) {
 		undo_stack.pushBack(new ResetIndices(*this));
@@ -114,7 +133,7 @@ bool PQPlanarity::makeReduced(int check_planarity_every) {
 
 		if (pipe.degree() <= 3) {
 			Result result = convertSmall(pipe.node1);
-			OGDF_ASSERT(result == PQPlanarity::Result::SUCCESS);
+			OGDF_ASSERT(result == SyncPlan::Result::SUCCESS);
 			// SYNCPLAN_PROFILE_STOP("makeReduced-step")
 			continue;
 		}
@@ -127,7 +146,7 @@ bool PQPlanarity::makeReduced(int check_planarity_every) {
 													   : Operation::CONTRACT_BICON);
 #endif
 			Result contract_result = contract(pipe.node1);
-			OGDF_ASSERT(contract_result == PQPlanarity::Result::SUCCESS);
+			OGDF_ASSERT(contract_result == SyncPlan::Result::SUCCESS);
 #ifdef SYNCPLAN_OPSTATS
 			printOPStatsEnd(true, dur_ns(tpc::now() - contract_start));
 #endif
@@ -137,10 +156,10 @@ bool PQPlanarity::makeReduced(int check_planarity_every) {
 
 		if (batch_spqr) {
 			Result batch_result = batchSPQR();
-			if (batch_result == PQPlanarity::Result::INVALID_INSTANCE) {
+			if (batch_result == SyncPlan::Result::INVALID_INSTANCE) {
 				// SYNCPLAN_PROFILE_STOP("makeReduced-step")
 				return false;
-			} else if (batch_result == PQPlanarity::Result::SUCCESS) {
+			} else if (batch_result == SyncPlan::Result::SUCCESS) {
 				// SYNCPLAN_PROFILE_STOP("makeReduced-step")
 				continue;
 			}
@@ -156,16 +175,18 @@ bool PQPlanarity::makeReduced(int check_planarity_every) {
 
 		Result tree_result = checkPCTree(block_vertex);
 		// SYNCPLAN_PROFILE_STOP("makeReduced-step")
-		if (tree_result == PQPlanarity::Result::NOT_APPLICABLE) {
+		if (tree_result == SyncPlan::Result::NOT_APPLICABLE) {
 			OGDF_ASSERT(matchings.getTopPipe().pipe_priority > top_prio);
 			continue;
-		} else if (tree_result == PQPlanarity::Result::SUCCESS) {
+		} else if (tree_result == SyncPlan::Result::SUCCESS) {
 			continue;
-		} else if (tree_result == PQPlanarity::Result::INVALID_INSTANCE) {
+		} else if (tree_result == SyncPlan::Result::INVALID_INSTANCE) {
 			return false;
 		}
 	}
 	OGDF_ASSERT(consistency.consistencyCheck());
 	// SYNCPLAN_PROFILE_STOP("makeReduced")
 	return true;
+}
+
 }

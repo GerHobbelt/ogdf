@@ -28,10 +28,15 @@
  * License along with this program; if not, see
  * http://www.gnu.org/copyleft/gpl.html
  */
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/List.h>
 #include <ogdf/basic/Math.h>
+#include <ogdf/basic/basic.h>
 #include <ogdf/cluster/sync_plan/QPartitioning.h>
 
-using namespace ogdf;
+#include <algorithm>
+
+namespace ogdf::sync_plan {
 
 bool QPartitioning::isQVertex(node n) const { return partitions[n] != NO_PARTITION; }
 
@@ -64,7 +69,7 @@ void QPartitioning::releaseQVertex(node n) {
 	OGDF_ASSERT(isQVertex(n));
 	int p = partitions[n];
 	partitions[n] = NO_PARTITION;
-	// FIXME the list is very short in our case, but do we really need to do this in our undo operations?
+	// room for improvement: the list is very short in our case, but do we really need to do this in our undo operations?
 	bool has_removed = partitioned_nodes[p].removeFirst(n);
 	OGDF_ASSERT(has_removed);
 	q_vertex_count--;
@@ -75,4 +80,6 @@ void QPartitioning::nodeDeleted(node v) {
 		partitioned_nodes[getPartitionOf(v)].removeFirst(v);
 		// partition might have turned empty, but we don't care
 	}
+}
+
 }

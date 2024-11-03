@@ -30,8 +30,15 @@
  */
 #pragma once
 
-#include <ogdf/basic/Logger.h>
+#include <ogdf/basic/Graph.h>
+#include <ogdf/basic/SList.h>
 #include <ogdf/cluster/ClusterGraph.h>
+
+namespace ogdf {
+class Logger;
+} // namespace ogdf
+
+namespace ogdf::sync_plan::preprocess {
 
 extern ogdf::Logger preprocessLog;
 
@@ -56,3 +63,5 @@ bool removeSmallClusters(ogdf::ClusterGraph& C, ogdf::Graph& G);
 bool preprocessClusterGraph(ogdf::ClusterGraph& C, ogdf::Graph& G);
 
 bool canPreprocessClusterGraph(const ogdf::ClusterGraph& C, const ogdf::Graph& G);
+
+}
