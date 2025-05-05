@@ -59,7 +59,8 @@ public:
 	 */
 	Observer() = default;
 
-	OGDF_DEPRECATED("calls registrationChanged with only partially-constructed child classes")
+	OGDF_DEPRECATED("calls registrationChanged with only partially-constructed child classes, "
+					"see copy constructor of Observer for fix")
 
 	explicit Observer(const TObserved* R) { reregister(R); }
 
@@ -87,6 +88,11 @@ public:
 	OGDF_NO_MOVE(Observer)
 
 	//! Associates observer instance with instance \p obs.
+	/**
+	 * This always unregisters and reregisters the observer, even if \p obs == getObserved().
+	 * Consequently, this observer will always be the last in the list to be notified of events.
+	 * Furthermore, registrationChanged() will always be fired when this method is called.
+	 */
 	void reregister(const TObserved* obs) {
 		const TObserved* old = m_pObserved;
 		if (m_pObserved) {

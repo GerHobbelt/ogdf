@@ -29,6 +29,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 #include <ogdf/basic/List.h>
+#include <ogdf/basic/RegisteredSet.h>
 #include <ogdf/hypergraph/Hypergraph.h>
 
 #include <functional>
@@ -37,10 +38,8 @@
 #include "array_helper.h"
 #include <testing.h>
 
-template<bool SFSQ>
-using HypernodeSet = RegisteredSet<HypergraphRegistry<HypernodeElement>, SFSQ>;
-template<bool SFSQ>
-using HyperedgeSet = RegisteredSet<HypergraphRegistry<HyperedgeElement>, SFSQ>;
+using HypernodeSet = RegisteredSet<HypergraphRegistry<HypernodeElement>>;
+using HyperedgeSet = RegisteredSet<HypergraphRegistry<HyperedgeElement>>;
 
 go_bandit([]() {
 	auto chooseHypernode = [](const Hypergraph& H) { return H.randomHypernode(); };

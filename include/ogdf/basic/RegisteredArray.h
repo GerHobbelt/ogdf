@@ -58,7 +58,7 @@ template<typename Registry>
 class RegisteredArrayBase;
 }
 template<typename Key, typename Registry, typename Iterator = void>
-class RegistryBase;
+class RegistryBase; // IWYU pragma: keep
 
 //! The default minimum table size for registered arrays.
 static constexpr int MIN_TABLE_SIZE = (1 << 4);
@@ -73,14 +73,15 @@ inline int calculateTableSize(int actualCount) {
 
 //! Abstract Base class for registry observers.
 template<typename Registry>
-class OGDF_EXPORT RegisteredObserver : public Observer<Registry, RegisteredObserver<Registry>> {
+class RegisteredObserver : public Observer<Registry, RegisteredObserver<Registry>> {
 	using Obs = Observer<Registry, RegisteredObserver<Registry>>;
 
 public:
 	//! Constructs instance of RegisteredObserver class
 	RegisteredObserver() = default;
 
-	OGDF_DEPRECATED("calls registrationChanged with only partially-constructed child classes")
+	OGDF_DEPRECATED("calls registrationChanged with only partially-constructed child classes, "
+					"see copy constructor of Observer for fix")
 
 	explicit RegisteredObserver(const Registry* R) { Obs::reregister(R); }
 
