@@ -322,7 +322,7 @@ public:
 	 *               if it is less than \a minVal.
 	 * \param maxVal The  value of the parameter is considered as infeasible
 	 *               if it is larger than \a maxVal.
-	 * \param defVal The default value that is used when the paramter is
+	 * \param defVal The default value that is used when the parameter is
 	 *               not found in the parameter table.
 	 */
 	void assignParameter(
@@ -359,7 +359,7 @@ public:
 	 *                  equal to zero, then all settings are allowed.
 	 * \param feasible  The settings for the parameter to be considered as
 	 *                  feasible. Must be an array of \a nFeasible strings.
-	 * \param defVal    The default value that is used when the paramter is
+	 * \param defVal    The default value that is used when the parameter is
 	 *                  not found in the parameter table.
 	 */
 	void assignParameter(
@@ -374,7 +374,7 @@ public:
 	 * \param param    The variable \a param receives the value of the parameter.
 	 * \param name     The name of the parameter.
 	 * \param feasible A string containing all feasible settings. If \a feasible is zero, then all settings are allowed.
-	 * \param defVal   The default value that is used when the paramter is not found in the parameter table.
+	 * \param defVal   The default value that is used when the parameter is not found in the parameter table.
 	 */
 	void assignParameter(char &param, const char *name,
 		const char *feasible, char defVal) const;

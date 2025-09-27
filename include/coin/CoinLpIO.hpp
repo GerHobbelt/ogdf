@@ -388,7 +388,7 @@ public:
 	      const int decimals,
 	      const bool useRowNames = true);
 
-  /** Write the data in Lp format in the file pointed to by the paramater fp.
+  /** Write the data in Lp format in the file pointed to by the parameter fp.
       Coefficients with value less than epsilon away from an integer value
       are written as integers.
       Write at most numberAcross monomials on a line.
